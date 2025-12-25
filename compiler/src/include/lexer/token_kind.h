@@ -2,6 +2,15 @@
 
 enum class TokenKind {
     ID,             // identifier or keyword
+
+    BLIT,           // bool literal
+    CLIT,           // character literal
+    SLIT,           // short literal
+    ILIT,           // int literal
+    FLIT,           // float literal
+    DLIT,           // double literal
+    STRLIT,         // string literal
+    
     SEMI,           // `;`
     COMMA,          // `,`
     DOT,            // `.`

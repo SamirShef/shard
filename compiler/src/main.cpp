@@ -1,4 +1,5 @@
 #include "include/common.h"
+#include "include/diagnostic/diagnostic.h"
 #include "include/lexer/lexer.h"
 #include <fstream>
 #include <iostream>
@@ -18,10 +19,16 @@ int main(int argc, char **argv) {
     std::ostringstream content;
     content << file.rdbuf();
 
-    Lexer lex(argv[1], content.str());
+    Diagnostic diag;
+
+    Lexer lex(diag, argv[1], content.str());
     std::vector<Token> tokens = lex.tokenize();
     for (Token token : tokens) {
         std::cout << token.to_str() << '\n';
+    }
+
+    if (diag.has_errs()) {
+        diag.print_errs();
     }
     return 0;
 }

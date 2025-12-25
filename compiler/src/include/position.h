@@ -6,6 +6,7 @@ struct Position {
     std::string file_name;
     u64 line;
     u64 column;
+    u64 pos;
     u64 len;
 
     std::string to_str() const {
