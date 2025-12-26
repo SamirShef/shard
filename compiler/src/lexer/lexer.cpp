@@ -29,6 +29,9 @@ std::vector<Token> Lexer::tokenize() {
         else if (isdigit(c) || c == '.') {
             tokens.push_back(tokenize_num());
         }
+        else if (c == '\'') {
+            tokens.push_back(tokenize_char_lit());
+        }
         else {
             tokens.push_back({.kind = TokenKind::UNKNOWN, .val = "", .pos = {.file_name = file_name, .line = line, .column = column, .len = 0}});
         }
@@ -169,11 +172,46 @@ Token Lexer::tokenize_num() {
 }
 
 Token Lexer::tokenize_str_lit() {
-
+    
 }
 
 Token Lexer::tokenize_char_lit() {
-
+    u64 tmp_l = line;
+    u64 tmp_c = column;
+    u64 tmp_p = pos;
+    std::string val;
+    advanve();      // skip `'`
+    while (pos < src.length() && peek() != '\'') {
+        val += advanve();
+    }
+    if (pos == src.length()) {
+        DiagPart err{.start_line_pos = start_line_pos, .line_len = pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c,
+                                                                                                 .pos = tmp_p, .len = pos - tmp_p},
+                     .level = DiagLevel::ERROR, .code = 4};
+        std::ostringstream msg;
+        msg << RED << "Missing closing single quote `'` in character literal.\n" << RESET;
+        std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
+        msg << std::setw(6) << err.pos.line << " | " << line << '\n';
+        msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
+        err.msg = msg.str();
+        diag.add_part(err);
+    }
+    else {
+        advanve();  // skip `'`
+    }
+    if (val.length() != 1) {
+        DiagPart err{.start_line_pos = start_line_pos, .line_len = pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c,
+                                                                                                 .pos = tmp_p, .len = pos - tmp_p},
+                     .level = DiagLevel::ERROR, .code = 5};
+        std::ostringstream msg;
+        msg << RED << "The character constant must have a length of 1.\n" << RESET;
+        std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
+        msg << std::setw(6) << err.pos.line << " | " << line << '\n';
+        msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
+        err.msg = msg.str();
+        diag.add_part(err);
+    }
+    return Token{TokenKind::CLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
 }
 
 Token Lexer::tokenize_op() {
