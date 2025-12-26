@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <sstream>
 #include <cctype>
+#include <stdexcept>
+#include <string>
 
 static u64 start_line_pos = 0;
 
@@ -101,8 +103,30 @@ Token Lexer::tokenize_num() {
             }
         }
     }
-    if (suffix == '\0' && has_dot) {
-        type = TokenKind::DLIT;
+    if (suffix == '\0') {
+        if (has_dot) {
+            type = TokenKind::DLIT;
+        }
+        else {
+            i64 ival = 0;
+            try {
+                ival = std::stoll(val);
+            }
+            catch (std::out_of_range ex) {
+                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                             .level = DiagLevel::ERROR, .code = 3};
+                errs.push_back(err);
+            }
+            if (std::abs(ival) < (1 << 15)) {
+                type = TokenKind::SLIT;
+            }
+            else if (std::abs(ival) < ((u64)1 << 31)) {
+                type = TokenKind::ILIT;
+            }
+            else if (std::abs(ival) < ((u64)1 << 63)) {
+                type = TokenKind::LLIT;
+            }
+        }
     }
     for (auto err : errs) {
         err.line_len = pos - start_line_pos;
@@ -128,6 +152,13 @@ Token Lexer::tokenize_num() {
                 std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
                 msg << std::setw(6) << err.pos.line << " | " << line << '\n';
                 msg << "       | " << std::string(line.length() - 1, ' ') << RED << '^' << RESET << " invalid suffix";
+                break;
+            }
+            case 3: {       // Overflow number
+                msg << RED << "Numeric literals cause overflow of standard types.\n" << RESET;
+                std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
+                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
+                msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
                 break;
             }
         }

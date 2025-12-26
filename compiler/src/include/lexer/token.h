@@ -26,6 +26,9 @@ struct Token {
             case TokenKind::ILIT:
                 res << "(i32) " << val;
                 break;
+            case TokenKind::LLIT:
+                res << "(i64) " << val;
+                break;
             case TokenKind::FLIT:
                 res << "(f32) " << val;
                 break;
