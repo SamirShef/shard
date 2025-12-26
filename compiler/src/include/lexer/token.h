@@ -14,6 +14,27 @@ struct Token {
             case TokenKind::ID:
                 res << val;
                 break;
+            case TokenKind::BLIT:
+                res << "(bool) " << val;
+                break;
+            case TokenKind::CLIT:
+                res << "(char) " << val;
+                break;
+            case TokenKind::SLIT:
+                res << "(i16) " << val;
+                break;
+            case TokenKind::ILIT:
+                res << "(i32) " << val;
+                break;
+            case TokenKind::FLIT:
+                res << "(f32) " << val;
+                break;
+            case TokenKind::DLIT:
+                res << "(f64) " << val;
+                break;
+            case TokenKind::STRLIT:
+                res << "(str) " << val;
+                break;
             case TokenKind::SEMI:
                 res << ";";
                 break;

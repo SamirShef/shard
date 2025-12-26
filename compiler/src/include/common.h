@@ -11,4 +11,27 @@ using u32 = unsigned int;
 using u64 = unsigned long;
 
 #define RED "\033[31m"
+#define GREEN "\033[32m"
+#define YELLOW "\033[33m"
+#define BLUE "\033[34m"
+#define MAGENTA "\033[35m"
+#define CYAN "\033[36m"
+#define WHITE "\033[37m"
 #define RESET "\033[0m"
+
+#include <algorithm>
+#include <locale>
+
+inline std::string ltrim(std::string s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](u8 ch) {
+        return !std::isspace(ch);
+    }));
+    return s;
+}
+
+inline std::string rtrim(std::string s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](u8 ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+    return s;
+}
