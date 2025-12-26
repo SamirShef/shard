@@ -1,9 +1,9 @@
-#include "include/common.h"
 #include "include/diagnostic/diagnostic.h"
 #include "include/lexer/lexer.h"
-#include <fstream>
+#include "include/common.h"
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 int main(int argc, char **argv) {
     if (argc != 2) {

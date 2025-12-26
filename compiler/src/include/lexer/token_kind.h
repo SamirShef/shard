@@ -7,6 +7,7 @@ enum class TokenKind {
     CLIT,           // character literal
     SLIT,           // short literal
     ILIT,           // int literal
+    LLIT,           // long literal
     FLIT,           // float literal
     DLIT,           // double literal
     STRLIT,         // string literal
