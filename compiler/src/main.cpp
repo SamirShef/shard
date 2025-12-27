@@ -1,6 +1,7 @@
 #include "include/diagnostic/diagnostic.h"
 #include "include/lexer/lexer.h"
 #include "include/common.h"
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -34,6 +35,9 @@ int main(int argc, char **argv) {
 }
 
 void print_errs_and_clear(Diagnostic &diag) {
-    diag.print_errs();
-    diag.clear();
+    if (diag.has_errs()) {
+        diag.print_errs();
+        diag.clear();
+        exit(1);
+    }
 }
