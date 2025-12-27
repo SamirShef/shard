@@ -19,8 +19,9 @@ std::vector<Token> Lexer::tokenize() {
             advanve();
         }
         else if (c == '/') {
-            if (pos + 1 < src.length() && src[pos + 1] == '/') {
+            if (pos + 1 < src.length() && (src[pos + 1] == '/' || src[pos + 1] == '*')) {
                 skip_comments();
+                continue;
             }
         }
         else if (isalpha(c) || c == '_') {
@@ -289,7 +290,18 @@ Token Lexer::tokenize_op() {
 }
 
 void Lexer::skip_comments() {
-
+    if (peek(1) == '/') {
+        while (pos < src.length() && peek() != '\n') {
+            advanve();
+        }
+    }
+    else {
+        while (pos < src.length() - 1 && (peek() != '*' || peek(1) != '/')) {
+            advanve();
+        }
+        advanve();
+        advanve();
+    }
 }
 
 const char Lexer::peek(u64 rpos) const {
