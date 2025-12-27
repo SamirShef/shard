@@ -88,15 +88,52 @@ Token Lexer::tokenize_num() {
             case ' ':
                 break;
             case 's':
+                try {
+                    i32 ival = std::stoi(val);
+                    if (std::abs(ival) > (1 << 15)) {
+                        DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                                     .level = DiagLevel::ERROR, .code = 3};
+                        errs.push_back(err);
+                    }
+                }
+                catch (std::out_of_range ex) {
+                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                                 .level = DiagLevel::ERROR, .code = 3};
+                    errs.push_back(err);
+                }
                 type = TokenKind::SLIT;
                 break;
             case 'l':
+                try {
+                    std::stol(val);
+                }
+                catch (std::out_of_range ex) {
+                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                                 .level = DiagLevel::ERROR, .code = 3};
+                    errs.push_back(err);
+                }
                 type = TokenKind::LLIT;
                 break;
             case 'f':
+                try {
+                    std::stof(val);
+                }
+                catch (std::out_of_range ex) {
+                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                                 .level = DiagLevel::ERROR, .code = 3};
+                    errs.push_back(err);
+                }
                 type = TokenKind::FLIT;
                 break;
             case 'd':
+                try {
+                    std::stod(val);
+                }
+                catch (std::out_of_range ex) {
+                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                                 .level = DiagLevel::ERROR, .code = 3};
+                    errs.push_back(err);
+                }
                 type = TokenKind::DLIT;
                 break;
             default: {
@@ -108,6 +145,14 @@ Token Lexer::tokenize_num() {
     }
     if (suffix == '\0') {
         if (has_dot) {
+            try {
+                std::stod(val);
+            }
+            catch (std::out_of_range ex) {
+                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                             .level = DiagLevel::ERROR, .code = 3};
+                errs.push_back(err);
+            }
             type = TokenKind::DLIT;
         }
         else {
@@ -158,7 +203,7 @@ Token Lexer::tokenize_num() {
                 break;
             }
             case 3: {       // Overflow number
-                msg << RED << "Numeric literals cause overflow of standard types.\n" << RESET;
+                msg << RED << "Numeric literal cause overflow.\n" << RESET;
                 std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
                 msg << std::setw(6) << err.pos.line << " | " << line << '\n';
                 msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
