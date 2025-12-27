@@ -27,7 +27,7 @@ std::vector<Token> Lexer::tokenize() {
             tokens.push_back(tokenize_id());
         }
         else if (isdigit(c) || c == '.') {
-            tokens.push_back(tokenize_num());
+            tokens.push_back(tokenize_num_lit());
         }
         else if (c == '\'') {
             tokens.push_back(tokenize_char_lit());
@@ -51,7 +51,7 @@ Token Lexer::tokenize_id() {
     return Token{TokenKind::ID, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
 }
 
-Token Lexer::tokenize_num() {
+Token Lexer::tokenize_num_lit() {
     u64 tmp_l = line;
     u64 tmp_c = column;
     u64 tmp_p = pos;
@@ -93,8 +93,14 @@ Token Lexer::tokenize_num() {
         suffix = advanve();
         switch (tolower(suffix)) {
             case ' ':
+            case '\n':
                 break;
             case 's':
+                if (has_dot) {
+                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                                 .level = DiagLevel::ERROR, .code = 6};
+                    errs.push_back(err);
+                }
                 try {
                     i32 ival = std::stoi(val);
                     if (std::abs(ival) > (1 << 15)) {
@@ -111,6 +117,11 @@ Token Lexer::tokenize_num() {
                 type = TokenKind::SLIT;
                 break;
             case 'l':
+                if (has_dot) {
+                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
+                                 .level = DiagLevel::ERROR, .code = 6};
+                    errs.push_back(err);
+                }
                 try {
                     std::stol(val);
                 }
@@ -214,6 +225,13 @@ Token Lexer::tokenize_num() {
                 std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
                 msg << std::setw(6) << err.pos.line << " | " << line << '\n';
                 msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
+                break;
+            }
+            case 6: {       // Floating-point literal has integer suffix
+                msg << RED << "A floating-point literal has an integer suffix.\n" << RESET;
+                std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
+                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
+                msg << "       | " << std::string(line.length() - 1, ' ') << RED << '^' << RESET << " invalid literal";
                 break;
             }
         }

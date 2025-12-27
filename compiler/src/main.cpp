@@ -5,6 +5,8 @@
 #include <sstream>
 #include <fstream>
 
+void print_errs_and_clear(Diagnostic &diag);
+
 int main(int argc, char **argv) {
     if (argc != 2) {
         std::cerr << RED << "Usage: shardc path/to/src.sd\n" << RESET;
@@ -27,8 +29,11 @@ int main(int argc, char **argv) {
         std::cout << token.to_str() << '\n';
     }
 
-    if (diag.has_errs()) {
-        diag.print_errs();
-    }
+    print_errs_and_clear(diag);
     return 0;
+}
+
+void print_errs_and_clear(Diagnostic &diag) {
+    diag.print_errs();
+    diag.clear();
 }

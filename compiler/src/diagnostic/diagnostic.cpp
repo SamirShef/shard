@@ -14,3 +14,7 @@ void Diagnostic::print_errs() const {
         std::cerr << part.to_str() << '\n';
     }
 }
+
+void Diagnostic::clear() {
+    errs.clear();
+}

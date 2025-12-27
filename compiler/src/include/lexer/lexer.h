@@ -18,7 +18,7 @@ public:
 
 private:
     Token tokenize_id();
-    Token tokenize_num();
+    Token tokenize_num_lit();
     Token tokenize_str_lit();
     Token tokenize_char_lit();
     Token tokenize_op();

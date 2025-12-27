@@ -11,4 +11,5 @@ public:
     void add_part(DiagPart part);
     bool has_errs() const;
     void print_errs() const;
+    void clear();
 };
