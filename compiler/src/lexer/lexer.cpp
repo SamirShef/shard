@@ -76,7 +76,14 @@ Token Lexer::tokenize_num() {
                 }
                 continue;
             }
+            if (val.length() == 0) {
+                val += '0';
+            }
             has_dot = true;
+        }
+        else if (peek() == '_') {
+            advanve();
+            continue;
         }
         val += advanve();
     }
