@@ -33,6 +33,9 @@ std::vector<Token> Lexer::tokenize() {
         else if (c == '\'') {
             tokens.push_back(tokenize_char_lit());
         }
+        else if (c == '\"') {
+            tokens.push_back(tokenize_str_lit());
+        }
         else {
             tokens.push_back({.kind = TokenKind::UNKNOWN, .val = "", .pos = {.file_name = file_name, .line = line, .column = column, .len = 0}});
         }
@@ -263,7 +266,40 @@ Token Lexer::tokenize_num_lit() {
 }
 
 Token Lexer::tokenize_str_lit() {
-    
+    u64 tmp_l = line;
+    u64 tmp_c = column;
+    u64 tmp_p = pos;
+    std::string val;
+    advanve();      // skip `"`
+    while (pos < src.length() && peek() != '\"') {
+        char c;
+        if (peek() == '\\') {
+            advanve();
+            c = get_escape_sequence(tmp_l, tmp_c, tmp_p);
+        }
+        else {
+            c = advanve();
+        }
+        val += c;
+    }
+    if (pos == src.length()) {
+        u64 end_line_pos = 0;
+        for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
+        DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c,
+                                                                                                          .pos = tmp_p, .len = pos - tmp_p},
+                     .level = DiagLevel::ERROR, .code = 10};
+        std::ostringstream msg;
+        msg << RED << "Missing closing single quote `\"` in string literal.\n" << RESET;
+        std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
+        msg << std::setw(6) << err.pos.line << " | " << line << '\n';
+        msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
+        err.msg = msg.str();
+        diag.add_part(err);
+    }
+    else {
+        advanve();  // skip `"`
+    }
+    return Token{TokenKind::STRLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
 }
 
 Token Lexer::tokenize_char_lit() {
