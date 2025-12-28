@@ -482,5 +482,22 @@ const char Lexer::get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p) {
             }
             return val;
         }
+        default: {
+            u64 end_line_pos = 0;
+            for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
+            DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l,
+                                                                                                              .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
+                         .level = DiagLevel::ERROR, .code = 9};
+            std::ostringstream msg;
+            msg << RED << "Unsupported escape sequence.\n" << RESET;
+            std::string raw_line = src.substr(err.start_line_pos, err.line_len);
+            std::string line = ltrim(raw_line);
+            msg << std::setw(6) << err.pos.line << " | " << line << '\n';
+            msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, ' ') << RED
+                << std::string(err.pos.len, '^') << RESET << " invalid literal";
+            err.msg = msg.str();
+            diag.add_part(err);
+            return '\0';
+        }
     }
 }
