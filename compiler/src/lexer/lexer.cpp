@@ -49,7 +49,11 @@ Token Lexer::tokenize_id() {
     while (pos < src.length() && (isalnum(peek()) || peek() == '_')) {
         val += advanve();
     }
-    return Token{TokenKind::ID, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
+    TokenKind kind = TokenKind::ID;
+    if (val == "true" || val == "false") {
+        kind = TokenKind::BLIT;
+    }
+    return Token{kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
 }
 
 Token Lexer::tokenize_num_lit() {
@@ -89,7 +93,7 @@ Token Lexer::tokenize_num_lit() {
         val += advanve();
     }
     char suffix = '\0';
-    TokenKind type = TokenKind::ILIT;
+    TokenKind kind = TokenKind::ILIT;
     if (pos < src.length()) {
         suffix = advanve();
         switch (tolower(suffix)) {
@@ -116,7 +120,7 @@ Token Lexer::tokenize_num_lit() {
                                  .level = DiagLevel::ERROR, .code = 3};
                     errs.push_back(err);
                 }
-                type = TokenKind::SLIT;
+                kind = TokenKind::SLIT;
                 break;
             case 'l':
                 if (has_dot) {
@@ -132,7 +136,7 @@ Token Lexer::tokenize_num_lit() {
                                  .level = DiagLevel::ERROR, .code = 3};
                     errs.push_back(err);
                 }
-                type = TokenKind::LLIT;
+                kind = TokenKind::LLIT;
                 break;
             case 'f':
                 try {
@@ -143,7 +147,7 @@ Token Lexer::tokenize_num_lit() {
                                  .level = DiagLevel::ERROR, .code = 3};
                     errs.push_back(err);
                 }
-                type = TokenKind::FLIT;
+                kind = TokenKind::FLIT;
                 break;
             case 'd':
                 try {
@@ -154,7 +158,7 @@ Token Lexer::tokenize_num_lit() {
                                  .level = DiagLevel::ERROR, .code = 3};
                     errs.push_back(err);
                 }
-                type = TokenKind::DLIT;
+                kind = TokenKind::DLIT;
                 break;
             default: {
                 DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
@@ -173,7 +177,7 @@ Token Lexer::tokenize_num_lit() {
                              .level = DiagLevel::ERROR, .code = 3};
                 errs.push_back(err);
             }
-            type = TokenKind::DLIT;
+            kind = TokenKind::DLIT;
         }
         else {
             i64 ival = 0;
@@ -186,13 +190,13 @@ Token Lexer::tokenize_num_lit() {
                 errs.push_back(err);
             }
             if (std::abs(ival) < (1 << 15)) {
-                type = TokenKind::SLIT;
+                kind = TokenKind::SLIT;
             }
             else if (std::abs(ival) < ((u64)1 << 31)) {
-                type = TokenKind::ILIT;
+                kind = TokenKind::ILIT;
             }
             else if (std::abs(ival) < ((u64)1 << 63)) {
-                type = TokenKind::LLIT;
+                kind = TokenKind::LLIT;
             }
             else {
                 DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
@@ -255,7 +259,7 @@ Token Lexer::tokenize_num_lit() {
         err.msg = msg.str();
         diag.add_part(err);
     }
-    return Token{type, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
+    return Token{kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
 }
 
 Token Lexer::tokenize_str_lit() {
