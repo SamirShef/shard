@@ -1,3 +1,4 @@
+#include "../include/diagnostic/codes_msg_table.h"
 #include "../include/diagnostic/diagnostic.h"
 #include <iostream>
 
@@ -17,4 +18,28 @@ void Diagnostic::print_errs() const {
 
 void Diagnostic::clear() {
     errs.clear();
+}
+
+std::string get_msg_by_code(u16 code) {
+    return err_msgs.at(code);
+}
+
+void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, u64 space_len, u64 highlighter_len) {
+    std::ostringstream msg;
+    msg << RED << get_msg_by_code(part.code) << '\n' << RESET;
+    std::string line = ltrim(src.substr(part.start_line_pos, part.line_len));
+    msg << std::setw(6) << part.pos.line << " | " << line << '\n';
+    msg << "       | " << std::string(space_len, ' ') << RED << std::string(highlighter_len, '^') << RESET << " invalid literal";
+    part.msg = msg.str();
+    diag.add_part(part);
+}
+
+void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, std::string highlighter) {
+    std::ostringstream msg;
+    msg << RED << get_msg_by_code(part.code) << '\n' << RESET;
+    std::string line = ltrim(src.substr(part.start_line_pos, part.line_len));
+    msg << std::setw(6) << part.pos.line << " | " << line << '\n';
+    msg << highlighter;
+    part.msg = msg.str();
+    diag.add_part(part);
 }

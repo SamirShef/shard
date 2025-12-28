@@ -13,3 +13,7 @@ public:
     void print_errs() const;
     void clear();
 };
+
+void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, u64 space_len, u64 highlighter_len);
+
+void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, std::string highlighter);

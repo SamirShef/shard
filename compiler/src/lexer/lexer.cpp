@@ -1,12 +1,6 @@
 #include "../include/lexer/lexer.h"
 #include "../include/common.h"
-#include <iomanip>
 #include <iostream>
-#include <cstdlib>
-#include <sstream>
-#include <cctype>
-#include <stdexcept>
-#include <string>
 
 static u64 start_line_pos = 0;
 
@@ -209,58 +203,41 @@ Token Lexer::tokenize_num_lit() {
         }
     }
     for (auto err : errs) {
-        u64 end_line_pos = 0;
-        for (end_line_pos = err.start_line_pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-        err.line_len = end_line_pos - err.start_line_pos;
+        err.line_len = get_end_line_pos(err.start_line_pos) - err.start_line_pos;
         err.pos.len = pos - tmp_p;
         std::ostringstream msg;
         switch (err.code) {
             case 0: {       // several points in a numeric literal
-                msg << RED << "A numeric literal contains several dots.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), ' ') << RED
-                    << std::string(err.pos.len - 1, '^') << RESET << " invalid literal";
+                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len - 1);
                 break;
             }
             case 1: {       // does not have digits after the decimal point
-                msg << RED << "A numeric literal does not have digits after the decimal point.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), ' ') << RED
-                    << std::string(err.pos.len - 1, '^') << RESET << " invalid literal";
+                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len - 1);
                 break;
             }
             case 2: {       // Unsupported suffix
-                msg << RED << "Unsupported suffix of a numeric literal.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - 1 - raw_line.length() + line.length(), ' ') << RED << '^' << RESET << " invalid suffix";
+                diag_part_create(diag, err, src, pos - start_line_pos - 1 - raw_line.length() + line.length(), 1);
                 break;
             }
             case 3: {       // Overflow number
-                msg << RED << "Numeric literal cause overflow.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), ' ') << RED
-                    << std::string(err.pos.len - 1, '^') << RESET << " invalid literal";
+                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len - 1);
                 break;
             }
             case 6: {       // Floating-point literal has integer suffix
-                msg << RED << "A floating-point literal has an integer suffix.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - 1 - raw_line.length() + line.length(), ' ') << RED << '^' << RESET << " invalid literal";
+                diag_part_create(diag, err, src, pos - start_line_pos - 1 - raw_line.length() + line.length(), 1);
                 break;
             }
         }
-        err.msg = msg.str();
-        diag.add_part(err);
     }
     return Token{kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
 }
@@ -283,18 +260,11 @@ Token Lexer::tokenize_str_lit() {
         val += c;
     }
     if (pos == src.length()) {
-        u64 end_line_pos = 0;
-        for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c,
-                                                                                                          .pos = tmp_p, .len = pos - tmp_p},
+        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                     .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                      .level = DiagLevel::ERROR, .code = 10};
-        std::ostringstream msg;
-        msg << RED << "Missing closing single quote `\"` in string literal.\n" << RESET;
         std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
-        msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-        msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
-        err.msg = msg.str();
-        diag.add_part(err);
+        diag_part_create(diag, err, src, line.length() - err.pos.len, err.pos.len);
     }
     else {
         advanve();  // skip `"`
@@ -320,37 +290,22 @@ Token Lexer::tokenize_char_lit() {
         val += c;
     }
     if (pos == src.length()) {
-        u64 end_line_pos = 0;
-        for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c,
-                                                                                                          .pos = tmp_p, .len = pos - tmp_p},
+        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                     .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                      .level = DiagLevel::ERROR, .code = 4};
-        std::ostringstream msg;
-        msg << RED << "Missing closing single quote `'` in character literal.\n" << RESET;
         std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
-        msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-        msg << "       | " << std::string(line.length() - err.pos.len, ' ') << RED << std::string(err.pos.len, '^') << RESET << " invalid literal";
-        err.msg = msg.str();
-        diag.add_part(err);
+        diag_part_create(diag, err, src, line.length() - err.pos.len, err.pos.len);
     }
     else {
         advanve();  // skip `'`
     }
     if (val.length() != 1) {
-        u64 end_line_pos = 0;
-        for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c,
-                                                                                                          .pos = tmp_p, .len = pos - tmp_p},
+        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                     .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                      .level = DiagLevel::ERROR, .code = 5};
-        std::ostringstream msg;
-        msg << RED << "The character constant must have a length of 1.\n" << RESET;
         std::string raw_line = src.substr(err.start_line_pos, err.line_len);
         std::string line = ltrim(raw_line);
-        msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-        msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), ' ') << RED
-            << std::string(err.pos.len, '^') << RESET << " invalid literal";
-        err.msg = msg.str();
-        diag.add_part(err);
+        diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len);
     }
     return Token{TokenKind::CLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
 }
@@ -435,36 +390,20 @@ const char Lexer::get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p) {
                 }
             }
             if (digits_count == 0) {
-                u64 end_line_pos = 0;
-                for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l,
-                                                                                                                  .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
+                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                              .level = DiagLevel::ERROR, .code = 8};
-                std::ostringstream msg;
-                msg << RED << "Empty escape sequence.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, ' ') << RED
-                    << std::string(err.pos.len - 1, '^') << RESET << " invalid literal";
-                err.msg = msg.str();
-                diag.add_part(err);
+                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1);
             }
             if (val >= 128) {
-                u64 end_line_pos = 0;
-                for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l,
-                                                                                                                  .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
+                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                              .level = DiagLevel::ERROR, .code = 7};
-                std::ostringstream msg;
-                msg << RED << "The value of the escape sequence does not fit into the range `char`.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, ' ') << RED
-                    << std::string(err.pos.len - 1, '^') << RESET << " invalid literal";
-                err.msg = msg.str();
-                diag.add_part(err);
+                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1);
             }
             return val;
         }
@@ -487,57 +426,38 @@ const char Lexer::get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p) {
                     break;
                 }
             }
-            std::cout << val << '\n';
             if (digits_count == 0) {
-                u64 end_line_pos = 0;
-                for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l,
-                                                                                                                  .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
+                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                              .level = DiagLevel::ERROR, .code = 8};
-                std::ostringstream msg;
-                msg << RED << "Empty escape sequence.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, ' ') << RED
-                    << std::string(err.pos.len - 1, '^') << RESET << " invalid literal";
-                err.msg = msg.str();
-                diag.add_part(err);
+                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1);
             }
             if (val >= 128) {
-                u64 end_line_pos = 0;
-                for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l,
-                                                                                                                  .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
+                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                              .level = DiagLevel::ERROR, .code = 7};
-                std::ostringstream msg;
-                msg << RED << "The value of the escape sequence does not fit into the range `char`.\n" << RESET;
                 std::string raw_line = src.substr(err.start_line_pos, err.line_len);
                 std::string line = ltrim(raw_line);
-                msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-                msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, ' ') << RED
-                    << std::string(err.pos.len - 1, '^') << RESET << " invalid literal";
-                err.msg = msg.str();
-                diag.add_part(err);
+                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1);
             }
             return val;
         }
         default: {
-            u64 end_line_pos = 0;
-            for (end_line_pos = pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
-            DiagPart err{.start_line_pos = start_line_pos, .line_len = end_line_pos - start_line_pos, .pos = {.file_name = file_name, .line = tmp_l,
-                                                                                                              .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
+            DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
+                         .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
                          .level = DiagLevel::ERROR, .code = 9};
-            std::ostringstream msg;
-            msg << RED << "Unsupported escape sequence.\n" << RESET;
             std::string raw_line = src.substr(err.start_line_pos, err.line_len);
             std::string line = ltrim(raw_line);
-            msg << std::setw(6) << err.pos.line << " | " << line << '\n';
-            msg << "       | " << std::string(pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, ' ') << RED
-                << std::string(err.pos.len, '^') << RESET << " invalid literal";
-            err.msg = msg.str();
-            diag.add_part(err);
+            diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len);
             return '\0';
         }
     }
+}
+
+u64 Lexer::get_end_line_pos(u64 start_line_pos) const {
+    u64 end_line_pos;
+    for (end_line_pos = start_line_pos; end_line_pos < src.length() && src[end_line_pos] != '\n'; end_line_pos++);
+    return end_line_pos;
 }

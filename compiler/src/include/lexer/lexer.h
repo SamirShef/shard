@@ -26,4 +26,5 @@ private:
     const char peek(u64 rpos = 0) const;
     const char advanve();
     const char get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p);
+    u64 get_end_line_pos(u64 start_line_pos) const;
 };
