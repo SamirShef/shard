@@ -27,17 +27,28 @@ enum class TokenKind {
     COLON,          // `:`
     DOLLAR,         // `$`
     EQ,             // `=`
+    EQ_EQ,          // `==`
     BANG,           // `!`
+    BANG_EQ,        // `!=`
     LT,             // `<`
     GT,             // `>`
+    LT_EQ,          // `<=`
+    GT_EQ,          // `>=`
     AND,            // '&`
     OR,             // `|`
+    LOG_AND,        // '&&`
+    LOG_OR,         // `||`
     PLUS,           // `+`
     MINUS,          // `-`
     STAR,           // `*`
     SLASH,          // `/`
-    CARET,          // `^`
     PRECENT,        // `%`
+    PLUS_EQ,        // `+=`
+    MINUS_EQ,       // `-=`
+    STAR_EQ,        // `*=`
+    SLASH_EQ,       // `/=`
+    PRECENT_EQ,     // `%=`
+    CARET,          // `^`
 
     UNKNOWN,        // Unknown token, not expected by the lexer
 };

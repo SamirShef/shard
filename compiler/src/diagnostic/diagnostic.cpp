@@ -24,12 +24,12 @@ std::string get_msg_by_code(u16 code) {
     return err_msgs.at(code);
 }
 
-void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, u64 space_len, u64 highlighter_len) {
+void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, u64 space_len, u64 highlighter_len, std::string err_msg) {
     std::ostringstream msg;
     msg << RED << get_msg_by_code(part.code) << '\n' << RESET;
     std::string line = ltrim(src.substr(part.start_line_pos, part.line_len));
     msg << std::setw(6) << part.pos.line << " | " << line << '\n';
-    msg << "       | " << std::string(space_len, ' ') << RED << std::string(highlighter_len, '^') << RESET << " invalid literal";
+    msg << "       | " << std::string(space_len, ' ') << RED << std::string(highlighter_len, '^') << RESET << " " << err_msg;
     part.msg = msg.str();
     diag.add_part(part);
 }
