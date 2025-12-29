@@ -13,5 +13,6 @@ static std::vector<std::string> err_msgs {
     "The value of the escape sequence does not fit into the range `char`.",
     "Empty escape sequence.",
     "Unsupported escape sequence.",
-    "Missing closing double quote `\"` in string literal."
+    "Missing closing double quote `\"` in string literal.",
+    "Unsupported symbol"
 };
