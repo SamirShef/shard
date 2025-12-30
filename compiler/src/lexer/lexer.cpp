@@ -48,7 +48,7 @@ Token Lexer::tokenize_id() {
     if (val == "true" || val == "false") {
         kind = TokenKind::BLIT;
     }
-    return Token{kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
+    return Token(kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()});
 }
 
 Token Lexer::tokenize_num_lit() {
@@ -155,11 +155,9 @@ Token Lexer::tokenize_num_lit() {
                 }
                 kind = TokenKind::DLIT;
                 break;
-            default: {
-                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                             .level = DiagLevel::ERROR, .code = 2};
-                errs.push_back(err);
-            }
+            default:
+                pos--;
+                column--;
         }
     }
     if (suffix == '\0') {
@@ -237,7 +235,7 @@ Token Lexer::tokenize_num_lit() {
             }
         }
     }
-    return Token{kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
+    return Token(kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()});
 }
 
 Token Lexer::tokenize_str_lit() {
@@ -267,7 +265,7 @@ Token Lexer::tokenize_str_lit() {
     else {
         advanve();  // skip `"`
     }
-    return Token{TokenKind::STRLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
+    return Token(TokenKind::STRLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()});
 }
 
 Token Lexer::tokenize_char_lit() {
@@ -305,7 +303,7 @@ Token Lexer::tokenize_char_lit() {
         std::string line = ltrim(raw_line);
         diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len, "invalid literal");
     }
-    return Token{TokenKind::CLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}};
+    return Token(TokenKind::CLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()});
 }
 
 Token Lexer::tokenize_op() {
@@ -313,7 +311,7 @@ Token Lexer::tokenize_op() {
     u64 tmp_c = column;
     u64 tmp_p = pos;
     std::string val = {advanve()};
-    #define TOKEN(type) Token{TokenKind::type, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()}}
+    #define TOKEN(type) Token(TokenKind::type, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()})
     switch (val[0]) {
         case ';': {
             return TOKEN(SEMI);
@@ -358,77 +356,77 @@ Token Lexer::tokenize_op() {
             return TOKEN(DOLLAR);
         }
         case '=': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(EQ_EQ);
             }
             return TOKEN(EQ);
         }
         case '!': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(BANG_EQ);
             }
             return TOKEN(BANG);
         }
         case '>': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(GT_EQ);
             }
             return TOKEN(GT);
         }
         case '<': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(LT_EQ);
             }
             return TOKEN(LT);
         }
         case '&': {
-            if (peek() == '&') {
+            if (pos < src.length() && peek() == '&') {
                 val += advanve();
                 return TOKEN(LOG_AND);
             }
             return TOKEN(AND);
         }
         case '|': {
-            if (peek() == '|') {
+            if (pos < src.length() && peek() == '|') {
                 val += advanve();
                 return TOKEN(LOG_OR);
             }
             return TOKEN(OR);
         }
         case '+': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(PLUS_EQ);
             }
             return TOKEN(PLUS);
         }
         case '-': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(MINUS_EQ);
             }
             return TOKEN(MINUS);
         }
         case '*': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(STAR_EQ);
             }
             return TOKEN(STAR);
         }
         case '/': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(SLASH_EQ);
             }
             return TOKEN(SLASH);
         }
         case '%': {
-            if (peek() == '=') {
+            if (pos < src.length() && peek() == '=') {
                 val += advanve();
                 return TOKEN(PRECENT_EQ);
             }

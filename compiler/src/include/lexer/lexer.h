@@ -6,13 +6,13 @@
 class Lexer {
     Diagnostic &diag;
     std::string file_name;
-    std::string src;
+    std::string &src;
     u64 pos;
     u64 line;
     u64 column;
 
 public:
-    Lexer(Diagnostic &d, std::string fn, std::string s) : diag(d), file_name(fn), src(s), pos(0), line(1), column(1) {}
+    explicit Lexer(Diagnostic &d, std::string fn, std::string &s) : diag(d), file_name(fn), src(s), pos(0), line(1), column(1) {}
 
     std::vector<Token> tokenize();
 

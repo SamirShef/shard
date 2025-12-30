@@ -6,7 +6,7 @@ class Diagnostic {
     std::vector<DiagPart> errs;
 
 public:
-    Diagnostic() : errs() {}
+    explicit Diagnostic() : errs() {}
 
     void add_part(DiagPart part);
     bool has_errs() const;
