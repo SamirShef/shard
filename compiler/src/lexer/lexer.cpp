@@ -1,4 +1,5 @@
 #include "../include/lexer/lexer.h"
+#include "../include/lexer/keywords.h"
 #include "../include/common.h"
 #include <iostream>
 
@@ -45,7 +46,10 @@ Token Lexer::tokenize_id() {
         val += advanve();
     }
     TokenKind kind = TokenKind::ID;
-    if (val == "true" || val == "false") {
+    if (auto keyword_kind = keywords.find(val); keyword_kind != keywords.end()) {
+        kind = keyword_kind->second;
+    }
+    else if (val == "true" || val == "false") {
         kind = TokenKind::BLIT;
     }
     return Token(kind, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()});

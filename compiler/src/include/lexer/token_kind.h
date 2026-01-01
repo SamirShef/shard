@@ -1,7 +1,17 @@
 #pragma once
 
 enum class TokenKind {
-    ID,             // identifier or keyword
+    ID,             // identifier
+
+    VAR,            // keyword `var`
+    CONST,          // keyword `const`
+    BOOL,           // keyword `bool`
+    CHAR,           // keyword `char`
+    I16,            // keyword `i16`
+    I32,            // keyword `i32`
+    I64,            // keyword `i64`
+    F32,            // keyword `f32`
+    F64,            // keyword `f64`
 
     BLIT,           // bool literal
     CLIT,           // character literal

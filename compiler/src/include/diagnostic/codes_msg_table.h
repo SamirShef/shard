@@ -16,7 +16,7 @@ static std::vector<std::string> err_msgs {
     "Missing closing double quote `\"` in string literal.",
     "Unsupported symbol.",
     "Expected identifier.",
-    "Expected identifier, but got keyword.",
+    "Expected identifier, but got keyword or operator.",
     "Expected semicolon.",
     "Unexpected symbol.",
     "Expected type.",

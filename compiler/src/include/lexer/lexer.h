@@ -1,6 +1,7 @@
 #pragma once
 #include "../diagnostic/diagnostic.h"
 #include "token.h"
+#include <unordered_map>
 #include <vector>
 
 class Lexer {

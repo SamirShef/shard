@@ -7,8 +7,7 @@ std::vector<NodeUPTR> Parser::parse() {
     std::vector<NodeUPTR> stmts;
 
     while (pos < tokens.size()) {
-        if (is_keyword_by_name(peek(), "var") ||
-            is_keyword_by_name(peek(), "const")) {
+        if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
             stmts.push_back(parse_var_def_stmt());
         }
         else {
@@ -24,16 +23,16 @@ std::vector<NodeUPTR> Parser::parse() {
 }
 
 NodeUPTR Parser::parse_var_def_stmt() {
-    const Token first_token = advance();
-    bool is_const = first_token.val == "const";
+    const Token first_token = peek(-1);
+    bool is_const = first_token.kind == TokenKind::CONST;
     Type type = consume_type();
     type.is_const = is_const;
-    const std::string name = consume(TokenKind::ID, 12).val;
-    if (is_keyword(peek(-1))) {
+    const Token name_token = consume(TokenKind::ID, 12);
+    if (name_token.kind != TokenKind::ID) {
         DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(peek(-1)) - start_line_pos,
                      .pos = {.file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
                      .pos = peek(-1).pos.pos}, .level = DiagLevel::ERROR, .code = 13};
-        diag_part_create(diag, err, src, peek(-1).pos.pos - start_line_pos, name.length(), "keyword");
+        diag_part_create(diag, err, src, peek(-1).pos.pos - start_line_pos, name_token.val.length(), "keyword or operator");
     }
     NodeUPTR expr = nullptr;
     if (match(TokenKind::EQ)) {
@@ -41,7 +40,7 @@ NodeUPTR Parser::parse_var_def_stmt() {
     }
     Position stmt_pos = first_token.pos;
     stmt_pos.len = consume_semi().pos.pos - stmt_pos.pos;
-    return std::make_unique<VarDefStmt>(name, type, std::move(expr), stmt_pos);
+    return std::make_unique<VarDefStmt>(name_token.val, type, std::move(expr), stmt_pos);
 }
 
 NodeUPTR Parser::parse_expr() {
@@ -182,19 +181,8 @@ const Token Parser::advance() {
     return tok;
 }
 
-const bool Parser::is_keyword_by_name(const Token tok, const std::string val) const {
-    return tok.kind == TokenKind::ID && tok.val == val;
-}
-
-const bool Parser::is_keyword(const Token tok) const {
-    return std::find(keywords.begin(), keywords.end(), tok.val) != keywords.end();
-}
-
-const bool Parser::is_type(const std::string val) const {
-    if (val == "bool" || val == "char" || val == "i16" || val == "i32" || val == "i64" || val == "f32" || val == "f64") {
-        return true;
-    }
-    return false;
+const bool Parser::is_type(const TokenKind kind) const {
+    return (int)kind >= (int)TokenKind::BOOL && (int)kind <= (int)TokenKind::F64;
 }
 
 const bool Parser::match(TokenKind kind) {
@@ -229,37 +217,29 @@ const Token Parser::consume_semi() {
 }
 
 const Type Parser::consume_type() {
-    const Token type = consume(TokenKind::ID, 16);
-    if (is_type(type.val)) {
-        if (type.val == "bool") {
-            return Type(TypeKind::BOOL);
-        }
-        else if (type.val == "char") {
-            return Type(TypeKind::CHAR);
-        }
-        else if (type.val == "i16") {
-            return Type(TypeKind::I16);
-        }
-        else if (type.val == "i32") {
-            return Type(TypeKind::I32);
-        }
-        else if (type.val == "i64") {
-            return Type(TypeKind::I64);
-        }
-        else if (type.val == "f32") {
-            return Type(TypeKind::F32);
-        }
-        else if (type.val == "f64") {
-            return Type(TypeKind::F64);
+    const Token type = advance();
+    if (is_type(type.kind)) {
+        switch (type.kind) {
+            case TokenKind::BOOL:
+                return Type(TypeKind::BOOL);
+            case TokenKind::CHAR:
+                return Type(TypeKind::CHAR);
+            case TokenKind::I16:
+                return Type(TypeKind::I16);
+            case TokenKind::I32:
+                return Type(TypeKind::I32);
+            case TokenKind::I64:
+                return Type(TypeKind::I64);
+            case TokenKind::F32:
+                return Type(TypeKind::F32);
+            case TokenKind::F64:
+                return Type(TypeKind::F64);
         }
     }
     DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(type) - start_line_pos,
                  .pos = {.file_name = type.pos.file_name, .line = type.pos.line, .column = type.pos.column,
                  .pos = type.pos.pos}, .level = DiagLevel::ERROR, .code = 16};
     diag_part_create(diag, err, src, type.pos.pos - start_line_pos, type.val.length(), "invalid type");
-    if (type.val == "") {
-        advance();
-    }
     return Type(TypeKind::I32);
 }
 
