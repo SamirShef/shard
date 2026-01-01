@@ -1,6 +1,7 @@
 #include "include/diagnostic/diagnostic.h"
 #include "include/lexer/lexer.h"
 #include "include/common.h"
+#include "include/parser/parser.h"
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -23,13 +24,20 @@ int main(int argc, char **argv) {
     content << file.rdbuf();
 
     Diagnostic diag;
+    std::string src = content.str();
 
-    Lexer lex(diag, argv[1], content.str());
+    Lexer lex(diag, argv[1], src);
     std::vector<Token> tokens = lex.tokenize();
-    for (Token token : tokens) {
+    for (const Token token : tokens) {
         std::cout << token.to_str() << '\n';
     }
+    print_errs_and_clear(diag);
 
+    Parser parser(diag, src, tokens);
+    std::vector<NodeUPTR> stmts = parser.parse();
+    for (const NodeUPTR &stmt : stmts) {
+        std::cout << stmt->to_str() << '\n';
+    }
     print_errs_and_clear(diag);
     return 0;
 }

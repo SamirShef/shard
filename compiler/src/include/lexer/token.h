@@ -8,6 +8,8 @@ struct Token {
     std::string val;
     Position pos;
 
+    explicit Token(TokenKind kind, std::string val, Position pos) : kind(kind), val(val), pos(pos) {}
+
     std::string to_str() const {
         std::ostringstream res;
         switch (kind) {
@@ -44,5 +46,9 @@ struct Token {
         }
         res << " (" << pos.to_str() << ')';
         return res.str();
+    }
+
+    static Token null_token(Position pos) {
+        return Token{TokenKind::UNKNOWN, "", pos};
     }
 };

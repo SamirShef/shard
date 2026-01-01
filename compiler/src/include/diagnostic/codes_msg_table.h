@@ -14,5 +14,11 @@ static std::vector<std::string> err_msgs {
     "Empty escape sequence.",
     "Unsupported escape sequence.",
     "Missing closing double quote `\"` in string literal.",
-    "Unsupported symbol"
+    "Unsupported symbol.",
+    "Expected identifier.",
+    "Expected identifier, but got keyword or operator.",
+    "Expected semicolon.",
+    "Unexpected symbol.",
+    "Expected type.",
+    "Expected expression."
 };

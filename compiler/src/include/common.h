@@ -10,6 +10,9 @@ using u16 = unsigned short;
 using u32 = unsigned int;
 using u64 = unsigned long;
 
+using f32 = float;
+using f64 = double;
+
 #define RED "\033[31m"
 #define GREEN "\033[32m"
 #define YELLOW "\033[33m"
