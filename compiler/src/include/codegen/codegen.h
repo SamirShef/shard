@@ -1,0 +1,49 @@
+#pragma once
+#include "../parser/ast.h"
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Value.h>
+#include <llvm/IR/Type.h>
+#include <stack>
+#include <map>
+
+class CodeGenerator {
+    std::vector<NodeUPTR> &stmts;
+    llvm::LLVMContext context;
+    llvm::IRBuilder<> builder;
+    std::unique_ptr<llvm::Module> module;
+    std::stack<std::map<std::string, llvm::Value*>> vars;
+
+public:
+    CodeGenerator(std::vector<NodeUPTR> &stmts, std::string file_name) : stmts(stmts), context(), builder(context),
+                                                                         module(std::make_unique<llvm::Module>(file_name, context)) {
+        vars.push({});
+    }
+    
+    void generate();
+
+    void print_ir() {
+        module->print(llvm::outs(), nullptr);
+    }
+
+    std::unique_ptr<llvm::Module> get_module() {
+        return std::move(module);
+    }
+
+private:
+    void generate_var_def(const VarDefStmt &vds);
+
+    llvm::Value *generate_expr(const Node &expr);
+    llvm::Value *generate_binary_expr(const BinaryExpr &be);
+    llvm::Value *generate_unary_expr(const UnaryExpr &ue);
+    llvm::Value *generate_literal_expr(const LiteralExpr &le);
+    llvm::Value *generate_var_expr(const VarExpr &ve);
+
+    llvm::Type *get_common_type(llvm::Type *LHS, llvm::Type *RHS);
+    llvm::Value *implicitly_cast(llvm::Value *dest, llvm::Type *expected);
+    llvm::Type *type_kind_to_llvm(TypeKind kind);
+};
