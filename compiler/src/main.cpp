@@ -2,6 +2,7 @@
 #include "include/lexer/lexer.h"
 #include "include/common.h"
 #include "include/parser/parser.h"
+#include "include/type_checker/type_checker.h"
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -38,6 +39,10 @@ int main(int argc, char **argv) {
     for (const NodeUPTR &stmt : stmts) {
         std::cout << stmt->to_str() << '\n';
     }
+    print_errs_and_clear(diag);
+
+    TypeChecker type_checker(diag, stmts);
+    type_checker.analyze();
     print_errs_and_clear(diag);
     return 0;
 }

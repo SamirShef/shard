@@ -50,10 +50,11 @@ NodeUPTR Parser::parse_expr() {
 NodeUPTR Parser::parse_log_and_expr() {
     NodeUPTR LHS = parse_log_or_expr();
     while (match(TokenKind::LOG_AND)) {
+        Token op = peek(-1);
         NodeUPTR RHS = parse_log_or_expr();
         Position pos = LHS->pos;
         pos.len = RHS->pos.pos + RHS->pos.len - LHS->pos.pos;
-        return std::make_unique<BinaryExpr>(TokenKind::LOG_AND, std::move(LHS), std::move(RHS), pos);
+        return std::make_unique<BinaryExpr>(op, std::move(LHS), std::move(RHS), pos);
     }
     return LHS;
 }
@@ -61,10 +62,11 @@ NodeUPTR Parser::parse_log_and_expr() {
 NodeUPTR Parser::parse_log_or_expr() {
     NodeUPTR LHS = parse_equality_expr();
     while (match(TokenKind::LOG_AND)) {
+        Token op = peek(-1);
         NodeUPTR RHS = parse_equality_expr();
         Position pos = LHS->pos;
         pos.len = RHS->pos.pos + RHS->pos.len - LHS->pos.pos;
-        return std::make_unique<BinaryExpr>(TokenKind::LOG_OR, std::move(LHS), std::move(RHS), pos);
+        return std::make_unique<BinaryExpr>(op, std::move(LHS), std::move(RHS), pos);
     }
     return LHS;
 }
@@ -76,7 +78,7 @@ NodeUPTR Parser::parse_equality_expr() {
         NodeUPTR RHS = parse_comparation_expr();
         Position pos = LHS->pos;
         pos.len = RHS->pos.pos + RHS->pos.len - LHS->pos.pos;
-        return std::make_unique<BinaryExpr>(op.kind, std::move(LHS), std::move(RHS), pos);
+        return std::make_unique<BinaryExpr>(op, std::move(LHS), std::move(RHS), pos);
     }
     return LHS;
 }
@@ -88,7 +90,7 @@ NodeUPTR Parser::parse_comparation_expr() {
         NodeUPTR RHS = parse_additive_expr();
         Position pos = LHS->pos;
         pos.len = RHS->pos.pos + RHS->pos.len - LHS->pos.pos;
-        return std::make_unique<BinaryExpr>(op.kind, std::move(LHS), std::move(RHS), pos);
+        return std::make_unique<BinaryExpr>(op, std::move(LHS), std::move(RHS), pos);
     }
     return LHS;
 }
@@ -100,19 +102,19 @@ NodeUPTR Parser::parse_additive_expr() {
         NodeUPTR RHS = parse_multiplicative_expr();
         Position pos = LHS->pos;
         pos.len = RHS->pos.pos + RHS->pos.len - LHS->pos.pos;
-        return std::make_unique<BinaryExpr>(op.kind, std::move(LHS), std::move(RHS), pos);
+        return std::make_unique<BinaryExpr>(op, std::move(LHS), std::move(RHS), pos);
     }
     return LHS;
 }
 
 NodeUPTR Parser::parse_multiplicative_expr() {
     NodeUPTR LHS = parse_unary_expr();
-    while (match(TokenKind::STAR) || match(TokenKind::SLASH) || match(TokenKind::PRECENT)) {
+    while (match(TokenKind::STAR) || match(TokenKind::SLASH) || match(TokenKind::PERCENT)) {
         const Token op = peek(-1);
         NodeUPTR RHS = parse_unary_expr();
         Position pos = LHS->pos;
         pos.len = RHS->pos.pos + RHS->pos.len - LHS->pos.pos;
-        return std::make_unique<BinaryExpr>(op.kind, std::move(LHS), std::move(RHS), pos);
+        return std::make_unique<BinaryExpr>(op, std::move(LHS), std::move(RHS), pos);
     }
     return LHS;
 }
@@ -123,7 +125,7 @@ NodeUPTR Parser::parse_unary_expr() {
         NodeUPTR RHS = parse_primary_expr();
         Position pos = RHS->pos;
         pos.len = RHS->pos.pos + RHS->pos.len - op.pos.pos;
-        return std::make_unique<UnaryExpr>(op.kind, std::move(RHS), pos);
+        return std::make_unique<UnaryExpr>(op, std::move(RHS), pos);
     }
     return parse_primary_expr();
 }
@@ -131,6 +133,9 @@ NodeUPTR Parser::parse_unary_expr() {
 NodeUPTR Parser::parse_primary_expr() {
     Token tok = peek();
     switch (tok.kind) {
+        case TokenKind::ID:
+            advance();
+            return std::make_unique<VarExpr>(tok.val, tok.pos);
         #define LIT(kind, field, val) std::make_unique<LiteralExpr>(Value(Type(TypeKind::kind, true), {.field = val}), tok.pos)
         case TokenKind::BLIT:
             advance();

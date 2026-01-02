@@ -43,3 +43,9 @@ void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, std::st
     part.msg = msg.str();
     diag.add_part(part);
 }
+
+void diag_part_create(Diagnostic &diag, u16 code, Position pos, DiagLevel level) {
+    std::string msg = RED + get_msg_by_code(code) + "\n" + RESET;
+    DiagPart err { .pos = pos, .level = level, .code = code, .msg = msg };
+    diag.add_part(err);
+}

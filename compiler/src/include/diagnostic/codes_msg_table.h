@@ -20,5 +20,10 @@ static std::vector<std::string> err_msgs {
     "Expected semicolon.",
     "Unexpected symbol.",
     "Expected type.",
-    "Expected expression."
+    "Expected expression.",
+    "Type mismatch.",
+    "Unsupported expression.",
+    "Type mismatch. Implicit casting is not possible.",
+    "Unsupported statement.",
+    "Variable does not declared.",
 };

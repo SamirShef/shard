@@ -52,7 +52,7 @@ enum class TokenKind {
     MINUS,          // `-`
     STAR,           // `*`
     SLASH,          // `/`
-    PRECENT,        // `%`
+    PERCENT,        // `%`
     PLUS_EQ,        // `+=`
     MINUS_EQ,       // `-=`
     STAR_EQ,        // `*=`
