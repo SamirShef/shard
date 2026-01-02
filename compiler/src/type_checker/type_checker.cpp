@@ -26,12 +26,12 @@ void TypeChecker::analyze_var_def(const VarDefStmt &vds) {
 
 Type TypeChecker::analyze_expr(const Node &expr) {
     switch (expr.type) {
+        case NodeType::LITERAL_EXPR:
+            return analyze_literal_expr(*expr.as<LiteralExpr>());
         case NodeType::BINARY_EXPR:
             return analyze_binary_expr(*expr.as<BinaryExpr>());
         case NodeType::UNARY_EXPR:
             return analyze_unary_expr(*expr.as<UnaryExpr>());
-        case NodeType::LITERAL_EXPR:
-            return analyze_literal_expr(*expr.as<LiteralExpr>());
         case NodeType::VAR_EXPR:
             return analyze_var_expr(*expr.as<VarExpr>());
         default:

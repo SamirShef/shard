@@ -171,7 +171,7 @@ NodeUPTR Parser::parse_primary_expr() {
 
 const Token Parser::peek(u64 rpos) const {
     if (pos + rpos >= tokens.size()) {
-        std::cerr << RED << "The index passed to the parser is out of bounds\n" << RESET;
+        std::cerr << COLOR_RED << "The index passed to the parser is out of bounds\n" << COLOR_RESET;
         exit(1);
     }
     return tokens[pos + rpos];

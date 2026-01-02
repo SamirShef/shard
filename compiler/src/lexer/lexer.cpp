@@ -469,7 +469,7 @@ void Lexer::skip_comments() {
 
 const char Lexer::peek(u64 rpos) const {
     if (pos + rpos >= src.length()) {
-        std::cerr << RED << "The index passed to the lexer is out of bounds\n" << RESET;
+        std::cerr << COLOR_RED << "The index passed to the lexer is out of bounds\n" << COLOR_RESET;
         exit(1);
     }
     return src[pos + rpos];

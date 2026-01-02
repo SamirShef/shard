@@ -18,16 +18,16 @@ struct DiagPart {
         std::ostringstream res;
         switch (level) {
             case DiagLevel::ERROR:
-                res << RED << "error [E" << std::setfill('0') << std::setw(4) << code << "]";
+                res << COLOR_RED << "error [E" << std::setfill('0') << std::setw(4) << code << "]";
                 break;
             case DiagLevel::WARNING:
-                res << BLUE << "warning [E" << std::setfill('0') << std::setw(4) << code << "]";
+                res << COLOR_BLUE << "warning [E" << std::setfill('0') << std::setw(4) << code << "]";
                 break;
             case DiagLevel::NOTE:
-                res << YELLOW << "note [E" << std::setfill('0') << std::setw(4) << code << "]";
+                res << COLOR_YELLOW << "note [E" << std::setfill('0') << std::setw(4) << code << "]";
                 break;
         }
-        res << " at: " << RESET << pos.file_name << ':' << pos.to_str() << '\n' << msg;
+        res << " at: " << COLOR_RESET << pos.file_name << ':' << pos.to_str() << '\n' << msg;
         return res.str();
     }
 };
