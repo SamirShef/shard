@@ -1,14 +1,15 @@
 #pragma once
-#include "../lexer/token_kind.h"
+#include "../lexer/token.h"
 #include "../position.h"
 #include <sstream>
 #include <memory>
 
 enum class NodeType {
-    VarDefStmt,
-    LiteralExpr,
-    BinaryExpr,
-    UnaryExpr
+    VAR_DEF_STMT,
+    LITERAL_EXPR,
+    BINARY_EXPR,
+    UNARY_EXPR,
+    VAR_EXPR
 };
 
 struct Node {
@@ -21,7 +22,7 @@ struct Node {
     static NodeType get_type();
 
     template<typename TNode>
-    Node *as(NodeType type) {
+    TNode *as() {
         if (TNode::get_type() == type) {
             return static_cast<TNode*>(this);
         }
@@ -29,9 +30,9 @@ struct Node {
     }
 
     template<typename TNode>
-    const Node *as(NodeType type) const {
+    const TNode *as() const {
         if (TNode::get_type() == type) {
-            return static_cast<TNode*>(this);
+            return static_cast<const TNode*>(this);
         }
         return nullptr;
     }
@@ -55,6 +56,14 @@ struct Type {
 
     explicit Type(TypeKind kind) : kind(kind), is_const(false) {}
     explicit Type(TypeKind kind, bool is_const) : kind(kind), is_const(is_const) {}
+
+    const bool operator==(Type &other) {
+        return kind == other.kind && is_const == other.is_const;
+    }
+
+    const bool operator==(const Type &other) const {
+        return kind == other.kind;
+    }
 
     const std::string to_str() const {
         std::string res;
@@ -143,7 +152,7 @@ struct VarDefStmt : Node {
     explicit VarDefStmt(const std::string name, Type type, NodeUPTR expr, Position pos) : name(name), type(type), expr(std::move(expr)), NODE {}
 
     static NodeType get_type() {
-        return NodeType::VarDefStmt;
+        return NodeType::VAR_DEF_STMT;
     }
 
     const std::string to_str() const override {
@@ -162,7 +171,7 @@ struct LiteralExpr : Node {
     explicit LiteralExpr(Value val, Position pos) : val(val), NODE {}
     
     static NodeType get_type() {
-        return NodeType::LiteralExpr;
+        return NodeType::LITERAL_EXPR;
     }
 
     const std::string to_str() const override {
@@ -171,20 +180,20 @@ struct LiteralExpr : Node {
 };
 
 struct BinaryExpr : Node {
-    TokenKind op;
+    Token op;
     NodeUPTR LHS;
     NodeUPTR RHS;
 
-    explicit BinaryExpr(TokenKind op, NodeUPTR LHS, NodeUPTR RHS, Position pos) : op(op), LHS(std::move(LHS)), RHS(std::move(RHS)), NODE {}
+    explicit BinaryExpr(Token op, NodeUPTR LHS, NodeUPTR RHS, Position pos) : op(op), LHS(std::move(LHS)), RHS(std::move(RHS)), NODE {}
     
     static NodeType get_type() {
-        return NodeType::BinaryExpr;
+        return NodeType::BINARY_EXPR;
     }
 
     const std::string to_str() const override {
         std::ostringstream res;
         res << "BinaryExpr: " << LHS->to_str() << ' ';
-        switch (op) {
+        switch (op.kind) {
             case TokenKind::LOG_AND:
                 res << "&&";
                 break;
@@ -230,7 +239,7 @@ struct BinaryExpr : Node {
             case TokenKind::SLASH:
                 res << "/";
                 break;
-            case TokenKind::PRECENT:
+            case TokenKind::PERCENT:
                 res << "%";
                 break;
             default:
@@ -243,19 +252,19 @@ struct BinaryExpr : Node {
 };
 
 struct UnaryExpr : Node {
-    TokenKind op;
+    Token op;
     NodeUPTR RHS;
 
-    explicit UnaryExpr(TokenKind op, NodeUPTR RHS, Position pos) : op(op), RHS(std::move(RHS)), NODE {}
+    explicit UnaryExpr(Token op, NodeUPTR RHS, Position pos) : op(op), RHS(std::move(RHS)), NODE {}
 
     static NodeType get_type() {
-        return NodeType::UnaryExpr;
+        return NodeType::UNARY_EXPR;
     }
 
     const std::string to_str() const override {
         std::ostringstream res;
         res << "UnaryExpr: ";
-        switch (op) {
+        switch (op.kind) {
             case TokenKind::BANG:
                 res << "!";
                 break;
@@ -268,6 +277,20 @@ struct UnaryExpr : Node {
         }
         res << RHS->to_str();
         return res.str();
+    }
+};
+
+struct VarExpr : Node {
+    std::string var_name;
+
+    explicit VarExpr(std::string var_name, Position pos) : var_name(var_name), NODE {}
+
+    static NodeType get_type() {
+        return NodeType::VAR_EXPR;
+    }
+
+    const std::string to_str() const override {
+        return "VarExpr: " + var_name;
     }
 };
 

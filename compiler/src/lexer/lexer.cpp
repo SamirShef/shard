@@ -434,7 +434,7 @@ Token Lexer::tokenize_op() {
                 val += advanve();
                 return TOKEN(PRECENT_EQ);
             }
-            return TOKEN(PRECENT);
+            return TOKEN(PERCENT);
         }
         case '^': {
             return TOKEN(CARET);
