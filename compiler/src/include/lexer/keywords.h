@@ -13,5 +13,7 @@ static std::unordered_map<std::string, TokenKind> keywords {
     { "i64", TokenKind::I64 },
     { "f32", TokenKind::F32 },
     { "f64", TokenKind::F64 },
+    { "noth", TokenKind::NOTH },
     { "fun", TokenKind::FUN },
+    { "return", TokenKind::RET },
 };

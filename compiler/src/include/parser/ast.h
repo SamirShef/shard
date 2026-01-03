@@ -8,6 +8,7 @@
 enum class NodeType {
     VAR_DEF_STMT,
     FUN_DEF_STMT,
+    RET_STMT,
     LITERAL_EXPR,
     BINARY_EXPR,
     UNARY_EXPR,
@@ -50,7 +51,8 @@ enum class TypeKind {
     I32,
     I64,
     F32,
-    F64
+    F64,
+    NOTH
 };
 
 struct Type {
@@ -91,6 +93,9 @@ struct Type {
                 break;
             case TypeKind::F64:
                 res = "f64";
+                break;
+            case TypeKind::NOTH:
+                res = "noth";
                 break;
         }
         return is_const ? "const " + res : res;
@@ -208,6 +213,23 @@ struct FunDefStmt : Node {
         }
         res << '}';
         return res.str();
+    }
+};
+
+struct RetStmt : Node {
+    NodeUPTR expr;
+
+    explicit RetStmt(NodeUPTR expr, Position pos) : expr(std::move(expr)), NODE {}
+
+    static NodeType get_type() {
+        return NodeType::RET_STMT;
+    }
+
+    const std::string to_str() const override {
+        if (expr) {
+            return "RetStmt: " + expr->to_str();
+        }
+        return "RetStmt: noth";
     }
 };
 

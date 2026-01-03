@@ -11,8 +11,11 @@ bool Diagnostic::has_errs() const {
 }
 
 void Diagnostic::print_errs() const {
-    for (auto part : errs) {
-        std::cerr << part.to_str() << '\n';
+    for (int i = 0; i < errs.size(); ++i) {
+        std::cerr << errs[i].to_str() << '\n';
+        if (i < errs.size() - 1) {
+            std::cerr << '\n';
+        }
     }
 }
 
@@ -27,7 +30,7 @@ std::string get_msg_by_code(u16 code) {
 void diag_part_create(Diagnostic &diag, DiagPart part, std::string err_msg) {
     std::ostringstream msg;
     msg << COLOR_RED << get_msg_by_code(part.code) << '\n' << COLOR_RESET;
-    msg << ' ' << err_msg;
+    msg << err_msg;
     part.msg = msg.str();
     diag.add_part(part);
 }
@@ -36,7 +39,7 @@ void diag_part_create(Diagnostic &diag, u16 code, Position pos, DiagLevel level,
     DiagPart err { .pos = pos, .level = level, .code = code, };
     std::ostringstream msg;
     msg << COLOR_RED << get_msg_by_code(err.code) << '\n' << COLOR_RESET;
-    msg << ' ' << err_msg;
+    msg << err_msg;
     err.msg = msg.str();
     diag.add_part(err);
 }

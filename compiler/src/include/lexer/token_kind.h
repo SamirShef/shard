@@ -12,7 +12,9 @@ enum class TokenKind {
     I64,            // keyword `i64`
     F32,            // keyword `f32`
     F64,            // keyword `f64`
+    NOTH,           // keyword `noth`
     FUN,            // keyword `fun`
+    RET,            // keyword `return`
 
     BLIT,           // bool literal
     CLIT,           // character literal
