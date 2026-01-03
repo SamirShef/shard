@@ -7,33 +7,41 @@ std::vector<NodeUPTR> Parser::parse() {
     std::vector<NodeUPTR> stmts;
 
     while (pos < tokens.size()) {
-        if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
-            stmts.push_back(parse_var_def_stmt());
-        }
-        else {
-            DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(peek()) - start_line_pos,
-                         .pos = {.file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column,
-                         .pos = peek().pos.pos}, .level = DiagLevel::ERROR, .code = 15};
-            diag_part_create(diag, err, src, peek().pos.pos - start_line_pos, peek().val.length(), "unexpected symbol");
-            advance();
-        }
+        stmts.push_back(parse_stmt());
     }
 
     return stmts;
 }
 
+NodeUPTR Parser::parse_stmt() {
+    if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
+        return parse_var_def_stmt();
+    }
+    else if (match(TokenKind::FUN)) {
+        return parse_fun_def_stmt();
+    }
+    else {
+        DiagPart err { .pos = { .file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column, .pos = peek().pos.pos },
+                       .level = DiagLevel::ERROR, .code = 15 };
+        diag_part_create(diag, err, "unexpected symbol");
+        advance();
+    }
+    return nullptr;
+}
+
 NodeUPTR Parser::parse_var_def_stmt() {
     const Token first_token = peek(-1);
     bool is_const = first_token.kind == TokenKind::CONST;
-    Type type = consume_type();
-    type.is_const = is_const;
     const Token name_token = consume(TokenKind::ID, 12);
     if (name_token.kind != TokenKind::ID) {
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(peek(-1)) - start_line_pos,
-                     .pos = {.file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
-                     .pos = peek(-1).pos.pos}, .level = DiagLevel::ERROR, .code = 13};
-        diag_part_create(diag, err, src, peek(-1).pos.pos - start_line_pos, name_token.val.length(), "keyword or operator");
+        DiagPart err { .pos = { .file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
+                       .pos = peek(-1).pos.pos }, .level = DiagLevel::ERROR, .code = 13 };
+        diag_part_create(diag, err, "keyword or operator");
     }
+    consume(TokenKind::COLON, 15, "expected `:`");
+    Type type = consume_type();
+    type.is_const = is_const;
+
     NodeUPTR expr = nullptr;
     if (match(TokenKind::EQ)) {
         expr = parse_expr();
@@ -41,6 +49,35 @@ NodeUPTR Parser::parse_var_def_stmt() {
     Position stmt_pos = first_token.pos;
     stmt_pos.len = consume_semi().pos.pos - stmt_pos.pos;
     return std::make_unique<VarDefStmt>(name_token.val, type, std::move(expr), stmt_pos);
+}
+
+NodeUPTR Parser::parse_fun_def_stmt() {
+    const Token name_token = consume(TokenKind::ID, 12);
+    if (name_token.kind != TokenKind::ID) {
+        DiagPart err { .pos = { .file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
+                       .pos = peek(-1).pos.pos }, .level = DiagLevel::ERROR, .code = 13 };
+        diag_part_create(diag, err, "keyword or operator");
+    }
+    consume(TokenKind::OPEN_PAREN, 15, "expected `(`");
+    std::vector<Argument> args;
+    while (!match(TokenKind::CLOSE_PAREN)) {
+        args.push_back(parse_arg());
+        if (peek().kind != TokenKind::CLOSE_PAREN) {
+            consume(TokenKind::COMMA, 15, "expected `,`");
+        }
+    }
+
+    Type ret_type = Type(TypeKind::I32);
+    if (match(TokenKind::COLON)) {
+        ret_type = consume_type();
+    }
+    
+    consume(TokenKind::OPEN_BRACE, 15, "expected `{`");
+    std::vector<NodeUPTR> block;
+    while (!match(TokenKind::CLOSE_BRACE)) {
+        block.push_back(parse_stmt());
+    }
+    return std::make_unique<FunDefStmt>(name_token.val, args, ret_type, std::move(block), name_token.pos);
 }
 
 NodeUPTR Parser::parse_expr() {
@@ -135,6 +172,16 @@ NodeUPTR Parser::parse_primary_expr() {
     switch (tok.kind) {
         case TokenKind::ID:
             advance();
+            if (match(TokenKind::OPEN_PAREN)) {
+                std::vector<NodeUPTR> args;
+                while (!match(TokenKind::CLOSE_PAREN)) {
+                    args.push_back(parse_expr());
+                    if (peek().kind != TokenKind::CLOSE_PAREN) {
+                        consume(TokenKind::COMMA, 15, "expected `,`");
+                    }
+                }
+                return std::make_unique<FunCallExpr>(tok.val, std::move(args), tok.pos);
+            }
             return std::make_unique<VarExpr>(tok.val, tok.pos);
         #define LIT(kind, field, val) std::make_unique<LiteralExpr>(Value(Type(TypeKind::kind, true), {.field = val}), tok.pos)
         case TokenKind::BLIT:
@@ -159,14 +206,25 @@ NodeUPTR Parser::parse_primary_expr() {
             advance();
             return LIT(F64, f64_val, std::stod(tok.val));
         default: {
-            DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(tok) - start_line_pos,
-                         .pos = {.file_name = tok.pos.file_name, .line = tok.pos.line, .column = tok.pos.column,
-                         .pos = tok.pos.pos}, .level = DiagLevel::ERROR, .code = 17};
-            diag_part_create(diag, err, src, tok.pos.pos - start_line_pos, tok.val.length(), "unexpected symbol");
+            DiagPart err { .pos = { .file_name = tok.pos.file_name, .line = tok.pos.line, .column = tok.pos.column, .pos = tok.pos.pos },
+                           .level = DiagLevel::ERROR, .code = 17 };
+            diag_part_create(diag, err, "unexpected symbol");
             return nullptr;
         }
         #undef LIT
     }
+}
+
+Argument Parser::parse_arg() {
+    const Token name_token = consume(TokenKind::ID, 12);
+    if (name_token.kind != TokenKind::ID) {
+        DiagPart err { .pos = { .file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
+                       .pos = peek(-1).pos.pos }, .level = DiagLevel::ERROR, .code = 13 };
+        diag_part_create(diag, err, "keyword or operator");
+    }
+    consume(TokenKind::COLON, 15, "expected `:`");
+    Type type = consume_type();
+    return Argument { .name = name_token.val, .type = type };
 }
 
 const Token Parser::peek(u64 rpos) const {
@@ -199,20 +257,22 @@ const bool Parser::match(TokenKind kind) {
 }
 
 const Token Parser::consume(TokenKind kind, u16 err_code) {
+    return consume(kind, err_code, "unexpected symbol");
+}
+
+const Token Parser::consume(TokenKind kind, u16 err_code, std::string err_msg) {
     if (pos < tokens.size() && peek().kind == kind) {
         return advance();
     }
     if (pos < tokens.size()) {
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(peek()) - start_line_pos,
-                     .pos = {.file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column,
-                     .pos = peek().pos.pos}, .level = DiagLevel::ERROR, .code = err_code};
-        diag_part_create(diag, err, src, peek().pos.pos - start_line_pos, peek().val.length(), "unexpected symbol");
+        DiagPart err { .pos = { .file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column, .pos = peek().pos.pos },
+                       .level = DiagLevel::ERROR, .code = err_code };
+        diag_part_create(diag, err, err_msg);
     }
     else {
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(peek(-1)) - start_line_pos,
-                     .pos = {.file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
-                     .pos = peek(-1).pos.pos}, .level = DiagLevel::ERROR, .code = err_code};
-        diag_part_create(diag, err, src, peek(-1).pos.pos - start_line_pos + peek(-1).pos.len, peek(-1).val.length(), "unexpected symbol");
+        DiagPart err { .pos = { .file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
+                       .pos = peek(-1).pos.pos }, .level = DiagLevel::ERROR, .code = err_code};
+        diag_part_create(diag, err, err_msg);
     }
     return Token::null_token(pos < tokens.size() ? advance().pos : peek(-1).pos);
 }
@@ -241,10 +301,9 @@ const Type Parser::consume_type() {
                 return Type(TypeKind::F64);
         }
     }
-    DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(type) - start_line_pos,
-                 .pos = {.file_name = type.pos.file_name, .line = type.pos.line, .column = type.pos.column,
-                 .pos = type.pos.pos}, .level = DiagLevel::ERROR, .code = 16};
-    diag_part_create(diag, err, src, type.pos.pos - start_line_pos, type.val.length(), "invalid type");
+    DiagPart err { .pos = { .file_name = type.pos.file_name, .line = type.pos.line, .column = type.pos.column, .pos = type.pos.pos },
+                   .level = DiagLevel::ERROR, .code = 16 };
+    diag_part_create(diag, err, "invalid type");
     return Type(TypeKind::I32);
 }
 

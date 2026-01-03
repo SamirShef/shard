@@ -14,8 +14,5 @@ public:
     void clear();
 };
 
-void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, u64 space_len, u64 highlighter_len, std::string err_msg);
-
-void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, std::string highlighter);
-
-void diag_part_create(Diagnostic &diag, u16 code, Position pos, DiagLevel level);
+void diag_part_create(Diagnostic &diag, DiagPart part, std::string err_msg);
+void diag_part_create(Diagnostic &diag, u16 code, Position pos, DiagLevel level, std::string err_msg);

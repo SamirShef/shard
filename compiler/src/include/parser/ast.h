@@ -3,13 +3,16 @@
 #include "../position.h"
 #include <sstream>
 #include <memory>
+#include <vector>
 
 enum class NodeType {
     VAR_DEF_STMT,
+    FUN_DEF_STMT,
     LITERAL_EXPR,
     BINARY_EXPR,
     UNARY_EXPR,
-    VAR_EXPR
+    VAR_EXPR,
+    FUN_CALL_EXPR
 };
 
 struct Node {
@@ -139,6 +142,15 @@ struct Value {
     }
 };
 
+struct Argument {
+    std::string name;
+    Type type;
+
+    const std::string to_str() const {
+        return "Argument: " + type.to_str() + ' ' + name;
+    }
+};
+
 using NodeUPTR = std::unique_ptr<Node>;
 using NodeSPTR = std::shared_ptr<Node>;
 
@@ -161,6 +173,40 @@ struct VarDefStmt : Node {
         if (expr) {
             res << " = " << expr->to_str();
         }
+        return res.str();
+    }
+};
+
+struct FunDefStmt : Node {
+    std::string name;
+    std::vector<Argument> args;
+    Type ret_type;
+    std::vector<NodeUPTR> block;
+
+    explicit FunDefStmt(std::string name, std::vector<Argument> args, Type ret_type, std::vector<NodeUPTR> block, Position pos)
+                      : name(name), args(args), ret_type(ret_type), block(std::move(block)), NODE {}
+
+    static NodeType get_type() {
+        return NodeType::FUN_DEF_STMT;
+    }
+
+    const std::string to_str() const override {
+        std::ostringstream res;
+        res << "FunDefStmt: " << ret_type.to_str() << ' ' << name << " (";
+        for (int i = 0; i < args.size(); ++i) {
+            res << args[i].to_str();
+            if (i < args.size() - 1) {
+                res << ", ";
+            }
+        }
+        res << ") {";
+        if (!block.empty()) {
+            res << '\n';
+        }
+        for (const auto &stmt : block) {
+            res << "  " << stmt->to_str() << '\n';
+        }
+        res << '}';
         return res.str();
     }
 };
@@ -291,6 +337,30 @@ struct VarExpr : Node {
 
     const std::string to_str() const override {
         return "VarExpr: " + var_name;
+    }
+};
+
+struct FunCallExpr : Node {
+    std::string fun_name;
+    std::vector<NodeUPTR> args;
+
+    explicit FunCallExpr(std::string fun_name, std::vector<NodeUPTR> args, Position pos) : fun_name(fun_name), args(std::move(args)), NODE {}
+
+    static NodeType get_type() {
+        return NodeType::FUN_CALL_EXPR;
+    }
+
+    const std::string to_str() const override {
+        std::ostringstream res;
+        res << "FunCallExpr: " << fun_name << " (";
+        for (int i = 0; i < args.size(); ++i) {
+            res << args[i]->to_str();
+            if (i < args.size() - 1) {
+                res << ", ";
+            }
+        }
+        res << ')';
+        return res.str();
     }
 };
 

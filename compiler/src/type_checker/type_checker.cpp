@@ -13,7 +13,7 @@ void TypeChecker::analyze() {
                 analyze_var_def(*stmt->as<VarDefStmt>());
                 break;
             default:
-                diag_part_create(diag, 21, stmt->pos, DiagLevel::ERROR);
+                diag_part_create(diag, 21, stmt->pos, DiagLevel::ERROR, "");
                 break;
         }
     }
@@ -35,7 +35,7 @@ Type TypeChecker::analyze_expr(const Node &expr) {
         case NodeType::VAR_EXPR:
             return analyze_var_expr(*expr.as<VarExpr>());
         default:
-            diag_part_create(diag, 19, expr.pos, DiagLevel::ERROR);
+            diag_part_create(diag, 19, expr.pos, DiagLevel::ERROR, "");
             return Type(TypeKind::I32, true);
     }
 }
@@ -56,25 +56,20 @@ Type TypeChecker::analyze_binary_expr(const BinaryExpr &be) {
         case TokenKind::LT_EQ:
             if (!((int)LHS.kind >= (int)TypeKind::CHAR && (int)LHS.kind >= (int)TypeKind::F64) ||
                 !((int)RHS.kind >= (int)TypeKind::CHAR && (int)RHS.kind >= (int)TypeKind::F64)) {
-                diag_part_create(diag, 18, be.pos, DiagLevel::ERROR);
+                diag_part_create(diag, 18, be.pos, DiagLevel::ERROR, "Cannot use `" + be.op.val + "` with `" + LHS.to_str() + "` and `" + RHS.to_str() + "` types.");
             }
             break;
         case TokenKind::LOG_AND:
         case TokenKind::LOG_OR:
             if (LHS.kind != TypeKind::BOOL || RHS.kind != TypeKind::BOOL) {
-                diag_part_create(diag, 18, be.pos, DiagLevel::ERROR);
-            }
-            break;
-        case TokenKind::EQ_EQ:
-            if (LHS.kind != RHS.kind) {
-                diag_part_create(diag, 18, be.pos, DiagLevel::ERROR);
+                diag_part_create(diag, 18, be.pos, DiagLevel::ERROR, "Cannot use `" + be.op.val + "` with `" + LHS.to_str() + "` and `" + RHS.to_str() + "` types (expected `bool` type).");
             }
             break;
         case TokenKind::AND:
         case TokenKind::OR:
             if (!((int)LHS.kind >= (int)TypeKind::CHAR && (int)LHS.kind >= (int)TypeKind::I64) ||
                 !((int)RHS.kind >= (int)TypeKind::CHAR && (int)RHS.kind >= (int)TypeKind::I64)) {
-                diag_part_create(diag, 18, be.pos, DiagLevel::ERROR);
+                diag_part_create(diag, 18, be.pos, DiagLevel::ERROR, "Cannot use `" + be.op.val + "` with `" + LHS.to_str() + "` and `" + RHS.to_str() + "` types (expected integer type).");
             }
             break;
         default: {}
@@ -88,12 +83,12 @@ Type TypeChecker::analyze_unary_expr(const UnaryExpr &ue) {
     switch (ue.op.kind) {
         case TokenKind::BANG:
             if (type.kind != TypeKind::BOOL) {
-                diag_part_create(diag, 18, ue.pos, DiagLevel::ERROR);
+                diag_part_create(diag, 18, ue.pos, DiagLevel::ERROR, "Cannot use `" + ue.op.val + "` with `" + type.to_str() + "` type (expected `bool` type).");
             }
             break;
         case TokenKind::MINUS:
             if (!((int)type.kind >= (int)TypeKind::CHAR && (int)type.kind >= (int)TypeKind::F64)) {
-                diag_part_create(diag, 18, ue.pos, DiagLevel::ERROR);
+                diag_part_create(diag, 18, ue.pos, DiagLevel::ERROR, "Cannot use `" + ue.op.val + "` with `" + type.to_str() + "` type (expected integer or number type).");
             }
             break;
         default: {}
@@ -116,7 +111,7 @@ Type TypeChecker::analyze_var_expr(const VarExpr &ve) {
         }
         vars_copy.pop();
     }
-    diag_part_create(diag, 22, ve.pos, DiagLevel::ERROR);
+    diag_part_create(diag, 22, ve.pos, DiagLevel::ERROR, "Variable `" + ve.var_name + "` is undeclared in current space.");
     return Type(TypeKind::I32, true);
 }
 
@@ -139,7 +134,7 @@ Type TypeChecker::get_common_type(const Type LHS, const Type RHS, Position pos) 
         (int)RHS.kind <= (int)TypeKind::F64 && (int)RHS.kind >= (int)TypeKind::CHAR) {
         return (int)LHS.kind > (int)RHS.kind ? LHS : RHS;
     }
-    diag_part_create(diag, 18, pos, DiagLevel::ERROR);
+    diag_part_create(diag, 18, pos, DiagLevel::ERROR, "`" + LHS.to_str() + "` and `" + RHS.to_str() + "` types does not have a common type.");
     return Type(TypeKind::I32, true);
 }
 
@@ -162,6 +157,6 @@ Type TypeChecker::implicitly_cast(const Type dest, const Type expected, Position
         std::find(it->second.begin(), it->second.end(), expected.kind) != it->second.end()) {
         return expected;
     }
-    diag_part_create(diag, 20, pos, DiagLevel::ERROR);
+    diag_part_create(diag, 20, pos, DiagLevel::ERROR, "Cannot cast `" + dest.to_str() + "` to `" + expected.to_str() + "`.");
     return Type(TypeKind::I32, true);
 }
