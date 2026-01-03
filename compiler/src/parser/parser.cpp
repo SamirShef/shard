@@ -20,6 +20,9 @@ NodeUPTR Parser::parse_stmt() {
     else if (match(TokenKind::FUN)) {
         return parse_fun_def_stmt();
     }
+    else if (match(TokenKind::RET)) {
+        return parse_return_stmt();
+    }
     else {
         DiagPart err { .pos = { .file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column, .pos = peek().pos.pos },
                        .level = DiagLevel::ERROR, .code = 15 };
@@ -78,6 +81,16 @@ NodeUPTR Parser::parse_fun_def_stmt() {
         block.push_back(parse_stmt());
     }
     return std::make_unique<FunDefStmt>(name_token.val, args, ret_type, std::move(block), name_token.pos);
+}
+
+NodeUPTR Parser::parse_return_stmt() {
+    Position pos = peek(-1).pos;
+    NodeUPTR expr = nullptr;
+    if (!match(TokenKind::SEMI)) {
+        expr = parse_expr();
+        consume_semi();
+    }
+    return std::make_unique<RetStmt>(std::move(expr), pos);
 }
 
 NodeUPTR Parser::parse_expr() {
@@ -299,6 +312,8 @@ const Type Parser::consume_type() {
                 return Type(TypeKind::F32);
             case TokenKind::F64:
                 return Type(TypeKind::F64);
+            case TokenKind::NOTH:
+                return Type(TypeKind::NOTH);
         }
     }
     DiagPart err { .pos = { .file_name = type.pos.file_name, .line = type.pos.line, .column = type.pos.column, .pos = type.pos.pos },

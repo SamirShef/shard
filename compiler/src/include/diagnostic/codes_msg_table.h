@@ -26,4 +26,7 @@ static std::vector<std::string> err_msgs {
     "Type mismatch. Implicit casting is not possible.",
     "Unsupported statement.",
     "Variable does not declared.",
+    "Invalid variable type.",
+    "Function does not declared.",
+    "The number of arguments in the function does not match."
 };
