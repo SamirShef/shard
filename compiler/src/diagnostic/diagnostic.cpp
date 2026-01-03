@@ -24,28 +24,19 @@ std::string get_msg_by_code(u16 code) {
     return err_msgs.at(code);
 }
 
-void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, u64 space_len, u64 highlighter_len, std::string err_msg) {
+void diag_part_create(Diagnostic &diag, DiagPart part, std::string err_msg) {
     std::ostringstream msg;
     msg << COLOR_RED << get_msg_by_code(part.code) << '\n' << COLOR_RESET;
-    std::string line = ltrim(src.substr(part.start_line_pos, part.line_len));
-    msg << std::setw(6) << part.pos.line << " | " << line << '\n';
-    msg << "       | " << std::string(space_len, ' ') << COLOR_RED << std::string(highlighter_len, '^') << COLOR_RESET << " " << err_msg;
+    msg << ' ' << err_msg;
     part.msg = msg.str();
     diag.add_part(part);
 }
 
-void diag_part_create(Diagnostic &diag, DiagPart part, std::string &src, std::string highlighter) {
+void diag_part_create(Diagnostic &diag, u16 code, Position pos, DiagLevel level, std::string err_msg) {
+    DiagPart err { .pos = pos, .level = level, .code = code, };
     std::ostringstream msg;
-    msg << COLOR_RED << get_msg_by_code(part.code) << '\n' << COLOR_RESET;
-    std::string line = ltrim(src.substr(part.start_line_pos, part.line_len));
-    msg << std::setw(6) << part.pos.line << " | " << line << '\n';
-    msg << highlighter;
-    part.msg = msg.str();
-    diag.add_part(part);
-}
-
-void diag_part_create(Diagnostic &diag, u16 code, Position pos, DiagLevel level) {
-    std::string msg = COLOR_RED + get_msg_by_code(code) + "\n" + COLOR_RESET;
-    DiagPart err { .pos = pos, .level = level, .code = code, .msg = msg };
+    msg << COLOR_RED << get_msg_by_code(err.code) << '\n' << COLOR_RESET;
+    msg << ' ' << err_msg;
+    err.msg = msg.str();
     diag.add_part(err);
 }

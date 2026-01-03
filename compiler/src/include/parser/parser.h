@@ -17,7 +17,9 @@ public:
 
 private:
     // statements
+    NodeUPTR parse_stmt();
     NodeUPTR parse_var_def_stmt();
+    NodeUPTR parse_fun_def_stmt();
 
     // expressions
     NodeUPTR parse_expr();
@@ -30,11 +32,14 @@ private:
     NodeUPTR parse_unary_expr();
     NodeUPTR parse_primary_expr();
 
+    Argument parse_arg();
+
     const Token peek(u64 rpos = 0) const;
     const Token advance();
     const bool is_type(const TokenKind kind) const;
     const bool match(TokenKind kind);
     const Token consume(TokenKind kind, u16 err_code);
+    const Token consume(TokenKind kind, u16 err_code, std::string err_msg);
     const Token consume_semi();
     const Type consume_type();
     u64 get_end_line_pos(Token start_token) const;

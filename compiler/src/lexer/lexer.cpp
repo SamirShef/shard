@@ -3,8 +3,6 @@
 #include "../include/common.h"
 #include <iostream>
 
-static u64 start_line_pos = 0;
-
 std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens;
 
@@ -65,13 +63,11 @@ Token Lexer::tokenize_num_lit() {
     while (pos < src.length() && (isdigit(peek()) || peek() == '_' || peek() == '.')) {
         if (peek() == '.') {
             if (has_dot) {
-                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                             .level = DiagLevel::ERROR, .code = 0};
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 0 };
                 errs.push_back(err);
             }
             if (pos < src.length() - 1 && !isdigit(peek(1)) || pos == src.length() - 1) {
-                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                             .level = DiagLevel::ERROR, .code = 1};
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 1 };
                 errs.push_back(err);
             }
             if (errs.size() != 0) {
@@ -102,37 +98,32 @@ Token Lexer::tokenize_num_lit() {
                 break;
             case 's':
                 if (has_dot) {
-                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                                 .level = DiagLevel::ERROR, .code = 6};
+                    DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 6 };
                     errs.push_back(err);
                 }
                 try {
                     i32 ival = std::stoi(val);
                     if (std::abs(ival) > (1 << 15)) {
-                        DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                                     .level = DiagLevel::ERROR, .code = 3};
+                        DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                         errs.push_back(err);
                     }
                 }
                 catch (std::out_of_range ex) {
-                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                                 .level = DiagLevel::ERROR, .code = 3};
+                    DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                     errs.push_back(err);
                 }
                 kind = TokenKind::SLIT;
                 break;
             case 'l':
                 if (has_dot) {
-                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                                 .level = DiagLevel::ERROR, .code = 6};
+                    DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 6 };
                     errs.push_back(err);
                 }
                 try {
                     std::stol(val);
                 }
                 catch (std::out_of_range ex) {
-                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                                 .level = DiagLevel::ERROR, .code = 3};
+                    DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                     errs.push_back(err);
                 }
                 kind = TokenKind::LLIT;
@@ -142,8 +133,7 @@ Token Lexer::tokenize_num_lit() {
                     std::stof(val);
                 }
                 catch (std::out_of_range ex) {
-                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                                 .level = DiagLevel::ERROR, .code = 3};
+                    DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                     errs.push_back(err);
                 }
                 kind = TokenKind::FLIT;
@@ -153,8 +143,7 @@ Token Lexer::tokenize_num_lit() {
                     std::stod(val);
                 }
                 catch (std::out_of_range ex) {
-                    DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                                 .level = DiagLevel::ERROR, .code = 3};
+                    DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                     errs.push_back(err);
                 }
                 kind = TokenKind::DLIT;
@@ -170,8 +159,7 @@ Token Lexer::tokenize_num_lit() {
                 std::stod(val);
             }
             catch (std::out_of_range ex) {
-                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                             .level = DiagLevel::ERROR, .code = 3};
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                 errs.push_back(err);
             }
             kind = TokenKind::DLIT;
@@ -182,8 +170,7 @@ Token Lexer::tokenize_num_lit() {
                 ival = std::stoll(val);
             }
             catch (std::out_of_range ex) {
-                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                             .level = DiagLevel::ERROR, .code = 3};
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                 errs.push_back(err);
             }
             if (std::abs(ival) < (1 << 15)) {
@@ -196,45 +183,33 @@ Token Lexer::tokenize_num_lit() {
                 kind = TokenKind::LLIT;
             }
             else {
-                DiagPart err{.start_line_pos = start_line_pos, .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p},
-                             .level = DiagLevel::ERROR, .code = 3};
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p }, .level = DiagLevel::ERROR, .code = 3 };
                 errs.push_back(err);
             }
         }
     }
     for (auto err : errs) {
-        err.line_len = get_end_line_pos(err.start_line_pos) - err.start_line_pos;
         err.pos.len = pos - tmp_p;
         std::ostringstream msg;
         switch (err.code) {
             case 0: {       // several points in a numeric literal
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len - 1, "invalid literal");
+                diag_part_create(diag, err, "invalid literal");
                 break;
             }
             case 1: {       // does not have digits after the decimal point
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len - 1, "invalid literal");
+                diag_part_create(diag, err, "invalid literal");
                 break;
             }
             case 2: {       // Unsupported suffix
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - 1 - raw_line.length() + line.length(), 1, "invalid suffix");
+                diag_part_create(diag, err, "invalid suffix");
                 break;
             }
             case 3: {       // Overflow number
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len - 1, "invalid literal");
+                diag_part_create(diag, err, "invalid literal");
                 break;
             }
             case 6: {       // Floating-point literal has integer suffix
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - 1 - raw_line.length() + line.length(), 1, "invalid literal");
+                diag_part_create(diag, err, "invalid literal");
                 break;
             }
         }
@@ -260,11 +235,9 @@ Token Lexer::tokenize_str_lit() {
         val += c;
     }
     if (pos == src.length()) {
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                     .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                     .level = DiagLevel::ERROR, .code = 10};
-        std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
-        diag_part_create(diag, err, src, line.length() - err.pos.len, err.pos.len, "invalid literal");
+        DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p }, 
+                       .level = DiagLevel::ERROR, .code = 10 };
+        diag_part_create(diag, err, "invalid literal");
     }
     else {
         advanve();  // skip `"`
@@ -290,22 +263,17 @@ Token Lexer::tokenize_char_lit() {
         val += c;
     }
     if (pos == src.length()) {
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                     .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                     .level = DiagLevel::ERROR, .code = 4};
-        std::string line = ltrim(src.substr(err.start_line_pos, err.line_len));
-        diag_part_create(diag, err, src, line.length() - err.pos.len, err.pos.len, "invalid literal");
+        DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                       .level = DiagLevel::ERROR, .code = 4 };
+        diag_part_create(diag, err, "invalid literal");
     }
     else {
         advanve();  // skip `'`
     }
     if (val.length() != 1) {
-        DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                     .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                     .level = DiagLevel::ERROR, .code = 5};
-        std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-        std::string line = ltrim(raw_line);
-        diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length(), err.pos.len, "invalid literal");
+        DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                       .level = DiagLevel::ERROR, .code = 5 };
+        diag_part_create(diag, err, "invalid literal");
     }
     return Token(TokenKind::CLIT, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()});
 }
@@ -315,7 +283,7 @@ Token Lexer::tokenize_op() {
     u64 tmp_c = column;
     u64 tmp_p = pos;
     std::string val = {advanve()};
-    #define TOKEN(type) Token(TokenKind::type, val, {file_name, tmp_l, tmp_c, tmp_p, val.length()})
+    #define TOKEN(type) Token(TokenKind::type, val, { file_name, tmp_l, tmp_c, tmp_p, val.length() })
     switch (val[0]) {
         case ';': {
             return TOKEN(SEMI);
@@ -440,12 +408,9 @@ Token Lexer::tokenize_op() {
             return TOKEN(CARET);
         }
         default: {
-            DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                         .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                         .level = DiagLevel::ERROR, .code = 11};
-            std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-            std::string line = ltrim(raw_line);
-            diag_part_create(diag, err, src, pos - start_line_pos - 1 - raw_line.length() + line.length(), 1, "invalid symbol");
+            DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                           .level = DiagLevel::ERROR, .code = 11 };
+            diag_part_create(diag, err, "invalid symbol");
             return TOKEN(UNKNOWN);
         }
     }
@@ -480,7 +445,6 @@ const char Lexer::advanve() {
     if (c == '\n') {
         column = 0;
         line++;
-        start_line_pos = pos + 1;
     }
     column++;
     pos++;
@@ -528,20 +492,14 @@ const char Lexer::get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p) {
                 }
             }
             if (digits_count == 0) {
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                             .level = DiagLevel::ERROR, .code = 8};
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1, "invalid sequence");
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                               .level = DiagLevel::ERROR, .code = 8 };
+                diag_part_create(diag, err, "invalid sequence");
             }
             if (val >= 128) {
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                             .level = DiagLevel::ERROR, .code = 7};
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1, "invalid sequence");
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                               .level = DiagLevel::ERROR, .code = 7 };
+                diag_part_create(diag, err, "invalid sequence");
             }
             return val;
         }
@@ -565,30 +523,21 @@ const char Lexer::get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p) {
                 }
             }
             if (digits_count == 0) {
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                             .level = DiagLevel::ERROR, .code = 8};
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1, "invalid sequence");
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                               .level = DiagLevel::ERROR, .code = 8 };
+                diag_part_create(diag, err, "invalid sequence");
             }
             if (val >= 128) {
-                DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                             .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                             .level = DiagLevel::ERROR, .code = 7};
-                std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-                std::string line = ltrim(raw_line);
-                diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len - 1, "invalid sequence");
+                DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                               .level = DiagLevel::ERROR, .code = 7 };
+                diag_part_create(diag, err, "invalid sequence");
             }
             return val;
         }
         default: {
-            DiagPart err{.start_line_pos = start_line_pos, .line_len = get_end_line_pos(pos) - start_line_pos,
-                         .pos = {.file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p},
-                         .level = DiagLevel::ERROR, .code = 9};
-            std::string raw_line = src.substr(err.start_line_pos, err.line_len);
-            std::string line = ltrim(raw_line);
-            diag_part_create(diag, err, src, pos - start_line_pos - err.pos.len - raw_line.length() + line.length() + 1, err.pos.len, "invalid sequence");
+            DiagPart err { .pos = { .file_name = file_name, .line = tmp_l, .column = tmp_c, .pos = tmp_p, .len = pos - tmp_p },
+                           .level = DiagLevel::ERROR, .code = 9 };
+            diag_part_create(diag, err, "invalid sequence");
             return '\0';
         }
     }

@@ -7,8 +7,6 @@
 #include <string>
 
 struct DiagPart {
-    u64 start_line_pos;
-    u64 line_len;
     Position pos;
     DiagLevel level;
     u16 code;
