@@ -15,23 +15,41 @@
 #include <fstream>
 #include <cstdlib>
 
+struct Flags {
+    bool help = false;
+    bool print_tokens = false;
+    bool print_ast = false;
+    bool print_ir = false;
+    std::string file_path = "";
+};
+
 void print_errs_and_clear(Diagnostic &diag);
 
+Flags parse_flags(int argc, char **argv);
+
+void print_help();
+
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        std::cerr << COLOR_RED << "Usage: shardc path/to/src.sd\n" << COLOR_RESET;
+    Flags flags = parse_flags(argc, argv);
+    if (flags.help) {
+        print_help();
+        return 0;
+    }
+    
+    if (flags.file_path == "") {
+        std::cerr << COLOR_RED << "Usage: shardc -f path/to/src.sd\n" << COLOR_RESET;
         return 1;
     }
     
-    std::ifstream file(argv[1]);
+    std::ifstream file(flags.file_path);
     if (!file.is_open()) {
-        std::cerr << COLOR_RED << "Unable to open file: " << argv[1] << "\n" << COLOR_RESET;
+        std::cerr << COLOR_RED << "Unable to open file: " << flags.file_path << "\n" << COLOR_RESET;
         return 1;
     }
     std::ostringstream content;
     content << file.rdbuf();
 
-    std::filesystem::path file_path = std::filesystem::absolute(argv[1]);
+    std::filesystem::path file_path = std::filesystem::absolute(flags.file_path);
     std::string executable_path = file_path;
 
     if (executable_path.find('.') != std::string::npos) {
@@ -57,17 +75,21 @@ int main(int argc, char **argv) {
     Diagnostic diag;
     std::string src = content.str();
 
-    Lexer lex(diag, argv[1], src);
+    Lexer lex(diag, flags.file_path, src);
     std::vector<Token> tokens = lex.tokenize();
-    for (const Token token : tokens) {
-        std::cout << token.to_str() << '\n';
+    if (flags.print_tokens) {
+        for (const Token token : tokens) {
+            std::cout << token.to_str() << '\n';
+        }
     }
     print_errs_and_clear(diag);
 
     Parser parser(diag, src, tokens);
     std::vector<NodeUPTR> stmts = parser.parse();
-    for (const NodeUPTR &stmt : stmts) {
-        std::cout << stmt->to_str() << '\n';
+    if (flags.print_ast) {
+        for (const NodeUPTR &stmt : stmts) {
+            std::cout << stmt->to_str() << '\n';
+        }
     }
     print_errs_and_clear(diag);
 
@@ -75,10 +97,11 @@ int main(int argc, char **argv) {
     type_checker.analyze();
     print_errs_and_clear(diag);
 
-    CodeGenerator codegen(stmts, argv[1]);
+    CodeGenerator codegen(stmts, flags.file_path);
     codegen.generate();
-    std::cout << '\n';
-    codegen.print_ir();
+    if (flags.print_ir) {
+        codegen.print_ir();
+    }
 
     std::unique_ptr<llvm::Module> module = codegen.get_module();
 
@@ -235,4 +258,45 @@ void print_errs_and_clear(Diagnostic &diag) {
         diag.clear();
         exit(1);
     }
+}
+
+Flags parse_flags(int argc, char **argv) {
+    Flags flags;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "-h" || arg == "--help") {
+            flags.help = true;
+        }
+        else if (arg == "-t" || arg == "--tokens") {
+            flags.print_tokens = true;
+        }
+        else if (arg == "-a" || arg == "--ast") {
+            flags.print_ast = true;
+        }
+        else if (arg == "-ir" || arg == "--ir") {
+            flags.print_ir = true;
+        }
+        else if (arg == "-f" || arg == "--file") {
+            if (++i < argc) {
+                flags.file_path = argv[i];
+            }
+            else {
+                std::cerr << COLOR_RED << "Usage: shardc -f path/to/src.sd\n" << COLOR_RESET;
+                exit(1);
+            }
+        }
+        else {
+            std::cerr << COLOR_RED << "Unsupported flag: " << arg << "\n" << COLOR_RESET;
+            exit(1);
+        }
+    }
+    return flags;
+}
+
+void print_help() {
+    std::cout << "-h / --help     - printing help text\n";
+    std::cout << "-t / --tokens   - printing list of tokens after lexing\n";
+    std::cout << "-a / --ast      - printing list of AST after parsing\n";
+    std::cout << "-ir / --ir      - printing IR code after generation of code\n";
+    std::cout << "-f / --file     - putting shard source file for compiling\n";
 }
