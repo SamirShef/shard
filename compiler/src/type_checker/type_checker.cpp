@@ -17,6 +17,9 @@ void TypeChecker::analyze_stmt(const Node &stmt) {
         case NodeType::VAR_DEF_STMT:
             analyze_var_def(*stmt.as<VarDefStmt>());
             break;
+        case NodeType::VAR_ASGN_STMT:
+            analyze_var_asgn(*stmt.as<VarAsgnStmt>());
+            break;
         case NodeType::FUN_DEF_STMT:
             analyze_fun_def(*stmt.as<FunDefStmt>());
             break;
@@ -42,6 +45,20 @@ void TypeChecker::analyze_var_def(const VarDefStmt &vds) {
         implicitly_cast(analyze_expr(*vds.expr), vds.type, vds.expr->pos);
     }
     vars.top().emplace(vds.name, vds.type);
+}
+
+void TypeChecker::analyze_var_asgn(const VarAsgnStmt &vas) {
+    auto vars_copy = vars;
+    while (!vars_copy.empty()) {
+        for (auto var : vars_copy.top()) {
+            if (var.first == vas.name) {
+                implicitly_cast(analyze_expr(*vas.expr), var.second, vas.expr->pos);
+                return;
+            }
+        }
+        vars_copy.pop();
+    }
+    diag_part_create(diag, 22, vas.pos, DiagLevel::ERROR, "Variable `" + vas.name + "` is undeclared in current space.");
 }
 
 void TypeChecker::analyze_fun_def(const FunDefStmt &fds) {
