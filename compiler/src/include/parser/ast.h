@@ -215,6 +215,30 @@ struct FunDefStmt : Node {
     }
 };
 
+struct FunCallStmt : Node {
+    std::string fun_name;
+    std::vector<NodeUPTR> args;
+
+    explicit FunCallStmt(std::string fun_name, std::vector<NodeUPTR> args, Position pos) : fun_name(fun_name), args(std::move(args)), NODE {}
+
+    static NodeType get_type() {
+        return NodeType::FUN_CALL_EXPR;
+    }
+
+    const std::string to_str() const override {
+        std::ostringstream res;
+        res << "FunCallStmt: " << fun_name << " (";
+        for (int i = 0; i < args.size(); ++i) {
+            res << args[i]->to_str();
+            if (i < args.size() - 1) {
+                res << ", ";
+            }
+        }
+        res << ')';
+        return res.str();
+    }
+};
+
 struct RetStmt : Node {
     NodeUPTR expr;
 

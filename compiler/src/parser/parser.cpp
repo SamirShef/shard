@@ -17,6 +17,11 @@ NodeUPTR Parser::parse_stmt() {
     if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
         return parse_var_def_stmt();
     }
+    else if (match(TokenKind::ID)) {
+        if (match(TokenKind::OPEN_PAREN)) {
+            return parse_fun_call_stmt();
+        }
+    }
     else if (match(TokenKind::FUN)) {
         return parse_fun_def_stmt();
     }
@@ -81,6 +86,19 @@ NodeUPTR Parser::parse_fun_def_stmt() {
         block.push_back(parse_stmt());
     }
     return std::make_unique<FunDefStmt>(name_token.val, args, ret_type, std::move(block), name_token.pos);
+}
+
+NodeUPTR Parser::parse_fun_call_stmt() {
+    const Token name_token = peek(-2);
+    std::vector<NodeUPTR> args;
+    while (!match(TokenKind::CLOSE_PAREN)) {
+        args.push_back(parse_expr());
+        if (peek().kind != TokenKind::CLOSE_PAREN) {
+            consume(TokenKind::COMMA, 15, "expected `,`");
+        }
+    }
+    consume_semi();
+    return std::make_unique<FunCallStmt>(name_token.val, std::move(args), name_token.pos);
 }
 
 NodeUPTR Parser::parse_return_stmt() {
