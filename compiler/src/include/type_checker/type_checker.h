@@ -29,6 +29,7 @@ private:
     void analyze_stmt(const Node &stmt);
     void analyze_var_def(const VarDefStmt &vds);
     void analyze_fun_def(const FunDefStmt &fds);
+    void analyze_fun_call(const FunCallStmt &fcs);
     void analyze_ret(const RetStmt &rs);
 
     Type analyze_expr(const Node &expr);

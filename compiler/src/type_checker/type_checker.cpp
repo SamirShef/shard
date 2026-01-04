@@ -20,6 +20,9 @@ void TypeChecker::analyze_stmt(const Node &stmt) {
         case NodeType::FUN_DEF_STMT:
             analyze_fun_def(*stmt.as<FunDefStmt>());
             break;
+        case NodeType::FUN_CALL_STMT:
+            analyze_fun_call(*stmt.as<FunCallStmt>());
+            break;
         case NodeType::RET_STMT:
             analyze_ret(*stmt.as<RetStmt>());
             break;
@@ -52,6 +55,22 @@ void TypeChecker::analyze_fun_def(const FunDefStmt &fds) {
     }
     fun_ret_types.pop();
     vars.pop();
+}
+
+void TypeChecker::analyze_fun_call(const FunCallStmt &fcs) {
+    auto fun_it = functions.find(fcs.fun_name);
+    if (fun_it == functions.end()) {
+        diag_part_create(diag, 24, fcs.pos, DiagLevel::ERROR, "Function `" + fcs.fun_name + "` is undeclared in current space.");
+        return;
+    }
+    Function fun = fun_it->second;
+    if (fun.args.size() != fcs.args.size()) {
+        diag_part_create(diag, 25, fcs.pos, DiagLevel::ERROR, "expected " + std::to_string(fun.args.size()) + ", but got " + std::to_string(fcs.args.size()) + '.');
+        return;
+    }
+    for (int i = 0; i < fun.args.size(); ++i) {
+        implicitly_cast(analyze_expr(*fcs.args[i]), fun.args[i], fcs.args[i]->pos);
+    }
 }
 
 void TypeChecker::analyze_ret(const RetStmt &rs) {
@@ -164,18 +183,10 @@ Type TypeChecker::analyze_fun_call_expr(const FunCallExpr &fce) {
         return Type(TypeKind::I32, true);
     }
     Function fun = fun_it->second;
-    for (int i = 0; i < fun.args.size(); ++i) {
-        if (i >= fce.args.size()) {
-            if (fce.args.size() == 0) {
-                diag_part_create(diag, 25, fce.pos, DiagLevel::ERROR, "expected " + std::to_string(fun.args.size()) +
-                                                                                         ", but got " + std::to_string(fce.args.size()) + '.');
-            }
-            else {
-                diag_part_create(diag, 25, fce.args[i - 1]->pos, DiagLevel::ERROR, "expected " + std::to_string(fun.args.size()) +
-                                                                                                      ", but got " + std::to_string(fce.args.size()) + '.');
-            }
-            break;
-        }
+    if (fun.args.size() != fce.args.size()) {
+        diag_part_create(diag, 25, fce.pos, DiagLevel::ERROR, "expected " + std::to_string(fun.args.size()) + ", but got " + std::to_string(fce.args.size()) + '.');
+    }
+    for (int i = 0; i < std::min(fun.args.size(), fce.args.size()); ++i) {
         implicitly_cast(analyze_expr(*fce.args[i]), fun.args[i], fce.args[i]->pos);
     }
     return fun.ret_type;
