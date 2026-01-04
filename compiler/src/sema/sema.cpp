@@ -43,6 +43,9 @@ void SemanticAnalyzer::analyze_var_def(const VarDefStmt &vds) {
 }
 
 void SemanticAnalyzer::analyze_var_asgn(const VarAsgnStmt &vas) {
+    if (fun_ret_types.empty()) {
+        diag_part_create(diag, 28, vas.pos, DiagLevel::ERROR, "");
+    }
     std::stack<std::unordered_map<std::string, ExprVal>> vars_copy;
     while (!vars.empty()) {
         for (auto &var : vars.top()) {

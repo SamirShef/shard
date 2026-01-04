@@ -69,6 +69,12 @@ NodeUPTR Parser::parse_var_asgn_stmt() {
         consume_semi();
         return std::make_unique<VarAsgnStmt>(name_token.val, create_compound_op(name_token.val, op, std::move(expr)), name_token.pos);
     }
+    else {
+        consume(TokenKind::EQ, 15, "expected `=`");
+        NodeUPTR expr = parse_expr();
+        consume_semi();
+        return std::make_unique<VarAsgnStmt>(name_token.val, std::move(expr), name_token.pos);
+    }
     diag_part_create(diag, 15, name_token.pos, DiagLevel::ERROR, "");
     return nullptr;
 }

@@ -30,5 +30,6 @@ static std::vector<std::string> err_msgs {
     "Function does not declared.",
     "The number of arguments in the function does not match.",
     "Not all paths return a value.",
-    "Division by zero."
+    "Division by zero.",
+    "Assigning a global variable in a global scope."
 };

@@ -1,6 +1,4 @@
 #include "../include/codegen/codegen.h"
-#include <llvm/IR/Type.h>
-#include <llvm/IR/Value.h>
 
 void CodeGenerator::generate() {
     for (const auto &stmt : stmts) {
@@ -12,6 +10,9 @@ void CodeGenerator::generate_stmt(const Node &stmt) {
     switch (stmt.type) {
         case NodeType::VAR_DEF_STMT:
             generate_var_def(*stmt.as<VarDefStmt>());
+            break;
+        case NodeType::VAR_ASGN_STMT:
+            generate_var_asgn(*stmt.as<VarAsgnStmt>());
             break;
         case NodeType::FUN_DEF_STMT:
             generate_fun_def(*stmt.as<FunDefStmt>());
@@ -38,8 +39,27 @@ void CodeGenerator::generate_var_def(const VarDefStmt &vds) {
     if (initializer->getType() != var_type) {
         initializer = implicitly_cast(initializer, var_type);
     }
-    auto var = new llvm::GlobalVariable(var_type, vds.type.is_const, llvm::GlobalValue::ExternalLinkage, llvm::dyn_cast_or_null<llvm::Constant>(initializer), vds.name);
-    vars.top().emplace(vds.name, initializer);
+    auto var = new llvm::GlobalVariable(*module, var_type, vds.type.is_const, llvm::GlobalValue::ExternalLinkage, llvm::dyn_cast_or_null<llvm::Constant>(initializer), vds.name);
+    vars.top().emplace(vds.name, var);
+}
+
+void CodeGenerator::generate_var_asgn(const VarAsgnStmt &vas) {
+    llvm::Value *val = generate_expr(*vas.expr);
+    auto vars_copy = vars;
+    while (!vars_copy.empty()) {
+        for (auto var : vars_copy.top()) {
+            if (var.first == vas.name) {
+                if (auto glob = llvm::dyn_cast<llvm::GlobalVariable>(var.second)) {
+                    val = implicitly_cast(val, glob->getValueType());
+                }
+                else if (auto local = llvm::dyn_cast<llvm::AllocaInst>(var.second)) {
+                    val = implicitly_cast(val, local->getAllocatedType());
+                }
+                builder.CreateStore(val, var.second);
+            }
+        }
+        vars_copy.pop();
+    }
 }
 
 void CodeGenerator::generate_fun_def(const FunDefStmt &fds) {
@@ -240,9 +260,12 @@ llvm::Value *CodeGenerator::generate_var_expr(const VarExpr &ve) {
         for (auto var : vars_copy.top()) {
             if (var.first == ve.var_name) {
                 if (auto glob = llvm::dyn_cast<llvm::GlobalVariable>(var.second)) {
+                    if (fun_ret_types.empty()) {
+                        return glob->getInitializer();
+                    }
                     return builder.CreateLoad(glob->getValueType(), glob, var.first + ".load");
                 }
-                if (auto local = llvm::dyn_cast<llvm::AllocaInst>(var.second)) {
+                else if (auto local = llvm::dyn_cast<llvm::AllocaInst>(var.second)) {
                     return builder.CreateLoad(local->getAllocatedType(), local, var.first + ".load");
                 }
                 return var.second;

@@ -38,6 +38,7 @@ public:
 private:
     void generate_stmt(const Node &stmt);
     void generate_var_def(const VarDefStmt &vds);
+    void generate_var_asgn(const VarAsgnStmt &vas);
     void generate_fun_def(const FunDefStmt &fds);
     void generate_fun_call(const FunCallStmt &fcs);
     void generate_ret(const RetStmt &rs);
