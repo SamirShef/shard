@@ -33,13 +33,20 @@ void CodeGenerator::generate_var_def(const VarDefStmt &vds) {
         initializer = generate_expr(*vds.expr);
     }
     else {
-        initializer = get_default_value(vds.type);
+        initializer = llvm::Constant::getNullValue(type_kind_to_llvm(vds.type.kind));
     }
     llvm::Type *var_type = type_kind_to_llvm(vds.type.kind);
     if (initializer->getType() != var_type) {
         initializer = implicitly_cast(initializer, var_type);
     }
-    auto var = new llvm::GlobalVariable(*module, var_type, vds.type.is_const, llvm::GlobalValue::ExternalLinkage, llvm::dyn_cast_or_null<llvm::Constant>(initializer), vds.name);
+    llvm::Value *var;
+    if (fun_ret_types.empty()) {
+        var = new llvm::GlobalVariable(*module, var_type, vds.type.is_const, llvm::GlobalValue::ExternalLinkage, llvm::dyn_cast_or_null<llvm::Constant>(initializer), vds.name);
+    }
+    else {
+        var = builder.CreateAlloca(var_type, 0, vds.name);
+        builder.CreateStore(initializer, var);
+    }
     vars.top().emplace(vds.name, var);
 }
 
