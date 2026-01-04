@@ -21,6 +21,7 @@ NodeUPTR Parser::parse_stmt() {
         if (match(TokenKind::OPEN_PAREN)) {
             return parse_fun_call_stmt();
         }
+        return parse_var_asgn_stmt();
     }
     else if (match(TokenKind::FUN)) {
         return parse_fun_def_stmt();
@@ -57,6 +58,19 @@ NodeUPTR Parser::parse_var_def_stmt() {
     Position stmt_pos = first_token.pos;
     stmt_pos.len = consume_semi().pos.pos - stmt_pos.pos;
     return std::make_unique<VarDefStmt>(name_token.val, type, std::move(expr), stmt_pos);
+}
+
+NodeUPTR Parser::parse_var_asgn_stmt() {
+    const Token name_token = peek(-1);
+    if (match(TokenKind::PLUS_EQ) || match(TokenKind::MINUS_EQ) || match(TokenKind::STAR_EQ) || match(TokenKind::SLASH_EQ) ||
+        match(TokenKind::PERCENT_EQ)) {
+        Token op = peek(-1);
+        NodeUPTR expr = parse_expr();
+        consume_semi();
+        return std::make_unique<VarAsgnStmt>(name_token.val, create_compound_op(name_token.val, op, std::move(expr)), name_token.pos);
+    }
+    diag_part_create(diag, 15, name_token.pos, DiagLevel::ERROR, "");
+    return nullptr;
 }
 
 NodeUPTR Parser::parse_fun_def_stmt() {
@@ -338,6 +352,25 @@ const Type Parser::consume_type() {
                    .level = DiagLevel::ERROR, .code = 16 };
     diag_part_create(diag, err, "invalid type");
     return Type(TypeKind::I32);
+}
+
+NodeUPTR Parser::create_compound_op(std::string var_name, Token op, NodeUPTR expr) {
+    Position pos = expr->pos;
+    switch (op.kind) {
+        #define EXPR(type, val) std::make_unique<BinaryExpr>(Token(TokenKind::type, val, op.pos), std::make_unique<VarExpr>(var_name, op.pos), std::move(expr), pos)
+        case TokenKind::PLUS_EQ:
+            return EXPR(PLUS, "+");
+        case TokenKind::MINUS_EQ:
+            return EXPR(MINUS, "-");
+        case TokenKind::STAR_EQ:
+            return EXPR(STAR, "*");
+        case TokenKind::SLASH_EQ:
+            return EXPR(SLASH, "/");
+        case TokenKind::PERCENT_EQ:
+            return EXPR(PERCENT, "%");
+        default: {}
+        #undef EXPR
+    }
 }
 
 u64 Parser::get_end_line_pos(Token start_token) const {

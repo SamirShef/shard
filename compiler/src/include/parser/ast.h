@@ -8,6 +8,7 @@
 
 enum class NodeType {
     VAR_DEF_STMT,
+    VAR_ASGN_STMT,
     FUN_DEF_STMT,
     FUN_CALL_STMT,
     RET_STMT,
@@ -186,6 +187,27 @@ struct VarDefStmt : Node {
             res << " = " << expr->to_str();
         }
         return res.str();
+    }
+};
+
+struct VarAsgnStmt : Node {
+    const std::string name;
+    NodeUPTR expr;
+
+    explicit VarAsgnStmt(const std::string name, NodeUPTR expr, Position pos) : name(name), expr(std::move(expr)), NODE {}
+
+    NodeUPTR clone() const override {
+        NodeUPTR cloned_expr = expr->clone();
+        return std::make_unique<VarAsgnStmt>(name, std::move(cloned_expr), pos);
+    }
+    
+    static NodeType get_type() {
+        return NodeType::VAR_ASGN_STMT;
+    }
+
+    const std::string to_str() const override {
+        std::ostringstream res;
+        return "VarAsgnStmt: " + name + " = " + expr->to_str();
     }
 };
 

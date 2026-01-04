@@ -19,6 +19,7 @@ private:
     // statements
     NodeUPTR parse_stmt();
     NodeUPTR parse_var_def_stmt();
+    NodeUPTR parse_var_asgn_stmt();
     NodeUPTR parse_fun_def_stmt();
     NodeUPTR parse_fun_call_stmt();
     NodeUPTR parse_return_stmt();
@@ -44,5 +45,6 @@ private:
     const Token consume(TokenKind kind, u16 err_code, std::string err_msg);
     const Token consume_semi();
     const Type consume_type();
+    NodeUPTR create_compound_op(std::string var_name, Token op, NodeUPTR expr);
     u64 get_end_line_pos(Token start_token) const;
 };
