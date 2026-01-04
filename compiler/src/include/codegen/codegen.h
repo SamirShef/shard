@@ -39,6 +39,7 @@ private:
     void generate_stmt(const Node &stmt);
     void generate_var_def(const VarDefStmt &vds);
     void generate_fun_def(const FunDefStmt &fds);
+    void generate_fun_call(const FunCallStmt &fcs);
     void generate_ret(const RetStmt &rs);
 
     llvm::Value *generate_expr(const Node &expr);
