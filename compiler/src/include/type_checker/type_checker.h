@@ -1,8 +1,8 @@
 #pragma once
 #include "../diagnostic/diagnostic.h"
 #include "../parser/ast.h"
-#include <stack>
 #include <unordered_map>
+#include <stack>
 
 class TypeChecker {
     Diagnostic &diag;
@@ -32,9 +32,9 @@ private:
     void analyze_ret(const RetStmt &rs);
 
     Type analyze_expr(const Node &expr);
+    Type analyze_literal_expr(const LiteralExpr &le);
     Type analyze_binary_expr(const BinaryExpr &be);
     Type analyze_unary_expr(const UnaryExpr &ue);
-    Type analyze_literal_expr(const LiteralExpr &le);
     Type analyze_var_expr(const VarExpr &ve);
     Type analyze_fun_call_expr(const FunCallExpr &fce);
 

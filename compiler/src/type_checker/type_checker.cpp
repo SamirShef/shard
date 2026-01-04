@@ -82,6 +82,10 @@ Type TypeChecker::analyze_expr(const Node &expr) {
     }
 }
 
+Type TypeChecker::analyze_literal_expr(const LiteralExpr &le) {
+    return le.val.type;
+}
+
 Type TypeChecker::analyze_binary_expr(const BinaryExpr &be) {
     const Type LHS = analyze_expr(*be.LHS);
     const Type RHS = analyze_expr(*be.RHS);
@@ -137,10 +141,6 @@ Type TypeChecker::analyze_unary_expr(const UnaryExpr &ue) {
     }
     
     return type;
-}
-
-Type TypeChecker::analyze_literal_expr(const LiteralExpr &le) {
-    return le.val.type;
 }
 
 Type TypeChecker::analyze_var_expr(const VarExpr &ve) {
