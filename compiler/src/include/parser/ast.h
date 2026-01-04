@@ -9,6 +9,7 @@
 enum class NodeType {
     VAR_DEF_STMT,
     FUN_DEF_STMT,
+    FUN_CALL_STMT,
     RET_STMT,
     LITERAL_EXPR,
     BINARY_EXPR,
@@ -23,6 +24,8 @@ struct Node {
 
     explicit Node(NodeType type, Position pos) : type(type), pos(pos) {}
     virtual ~Node() = default;
+    
+    virtual std::unique_ptr<Node> clone() const = 0;
 
     template<typename TNode>
     TNode *as() {
@@ -167,6 +170,11 @@ struct VarDefStmt : Node {
 
     explicit VarDefStmt(const std::string name, Type type, NodeUPTR expr, Position pos) : name(name), type(type), expr(std::move(expr)), NODE {}
 
+    NodeUPTR clone() const override {
+        NodeUPTR cloned_expr = expr->clone();
+        return std::make_unique<VarDefStmt>(name, type, std::move(cloned_expr), pos);
+    }
+    
     static NodeType get_type() {
         return NodeType::VAR_DEF_STMT;
     }
@@ -189,6 +197,14 @@ struct FunDefStmt : Node {
 
     explicit FunDefStmt(std::string name, std::vector<Argument> args, Type ret_type, std::vector<NodeUPTR> block, Position pos)
                       : name(name), args(args), ret_type(ret_type), block(std::move(block)), NODE {}
+    
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_block(block.size());
+        for (int i = 0; i < block.size(); ++i) {
+            cloned_block[i] = block[i]->clone();
+        }
+        return std::make_unique<FunDefStmt>(name, args, ret_type, std::move(cloned_block), pos);
+    }
 
     static NodeType get_type() {
         return NodeType::FUN_DEF_STMT;
@@ -221,8 +237,16 @@ struct FunCallStmt : Node {
 
     explicit FunCallStmt(std::string fun_name, std::vector<NodeUPTR> args, Position pos) : fun_name(fun_name), args(std::move(args)), NODE {}
 
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_args(args.size());
+        for (int i = 0; i < args.size(); ++i) {
+            cloned_args[i] = args[i]->clone();
+        }
+        return std::make_unique<FunCallStmt>(fun_name, std::move(cloned_args), pos);
+    }
+    
     static NodeType get_type() {
-        return NodeType::FUN_CALL_EXPR;
+        return NodeType::FUN_CALL_STMT;
     }
 
     const std::string to_str() const override {
@@ -244,6 +268,10 @@ struct RetStmt : Node {
 
     explicit RetStmt(NodeUPTR expr, Position pos) : expr(std::move(expr)), NODE {}
 
+    NodeUPTR clone() const override {
+        return std::make_unique<RetStmt>(expr ? expr->clone() : nullptr, pos);
+    }
+
     static NodeType get_type() {
         return NodeType::RET_STMT;
     }
@@ -261,6 +289,10 @@ struct LiteralExpr : Node {
 
     explicit LiteralExpr(Value val, Position pos) : val(val), NODE {}
     
+    NodeUPTR clone() const override {
+        return std::make_unique<LiteralExpr>(val, pos);
+    }
+    
     static NodeType get_type() {
         return NodeType::LITERAL_EXPR;
     }
@@ -276,6 +308,10 @@ struct BinaryExpr : Node {
     NodeUPTR RHS;
 
     explicit BinaryExpr(Token op, NodeUPTR LHS, NodeUPTR RHS, Position pos) : op(op), LHS(std::move(LHS)), RHS(std::move(RHS)), NODE {}
+
+    NodeUPTR clone() const override {
+        return std::make_unique<BinaryExpr>(op, LHS->clone(), RHS->clone(), pos);
+    }
     
     static NodeType get_type() {
         return NodeType::BINARY_EXPR;
@@ -347,6 +383,10 @@ struct UnaryExpr : Node {
     NodeUPTR RHS;
 
     explicit UnaryExpr(Token op, NodeUPTR RHS, Position pos) : op(op), RHS(std::move(RHS)), NODE {}
+    
+    NodeUPTR clone() const override {
+        return std::make_unique<UnaryExpr>(op, RHS->clone(), pos);
+    }
 
     static NodeType get_type() {
         return NodeType::UNARY_EXPR;
@@ -376,6 +416,10 @@ struct VarExpr : Node {
 
     explicit VarExpr(std::string var_name, Position pos) : var_name(var_name), NODE {}
 
+    NodeUPTR clone() const override {
+        return std::make_unique<VarExpr>(var_name, pos);
+    }
+
     static NodeType get_type() {
         return NodeType::VAR_EXPR;
     }
@@ -390,6 +434,14 @@ struct FunCallExpr : Node {
     std::vector<NodeUPTR> args;
 
     explicit FunCallExpr(std::string fun_name, std::vector<NodeUPTR> args, Position pos) : fun_name(fun_name), args(std::move(args)), NODE {}
+
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_args(args.size());
+        for (int i = 0; i < args.size(); ++i) {
+            cloned_args[i] = args[i]->clone();
+        }
+        return std::make_unique<FunCallExpr>(fun_name, std::move(cloned_args), pos);
+    }
 
     static NodeType get_type() {
         return NodeType::FUN_CALL_EXPR;

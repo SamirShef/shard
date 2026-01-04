@@ -54,6 +54,9 @@ void CodeGenerator::generate_fun_def(const FunDefStmt &fds) {
     for (auto &stmt : fds.block) {
         generate_stmt(*stmt);
     }
+    if (fds.ret_type.kind == TypeKind::NOTH) {
+        builder.CreateRetVoid();
+    }
     fun_ret_types.pop();
 }
 
@@ -312,6 +315,8 @@ llvm::Type *CodeGenerator::type_kind_to_llvm(TypeKind kind) {
             return TYPE(getFloatTy);
         case TypeKind::F64:
             return TYPE(getDoubleTy);
+        case TypeKind::NOTH:
+            return TYPE(getVoidTy);
         #undef TYPE
     }
 }

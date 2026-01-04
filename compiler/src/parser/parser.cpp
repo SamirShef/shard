@@ -75,7 +75,7 @@ NodeUPTR Parser::parse_fun_def_stmt() {
         }
     }
 
-    Type ret_type = Type(TypeKind::I32);
+    Type ret_type = Type(TypeKind::NOTH);
     if (match(TokenKind::COLON)) {
         ret_type = consume_type();
     }

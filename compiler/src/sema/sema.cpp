@@ -21,6 +21,9 @@ void SemanticAnalyzer::analyze_stmt(const Node &stmt) {
         case NodeType::FUN_DEF_STMT:
             analyze_fun_def(*stmt.as<FunDefStmt>());
             break;
+        case NodeType::FUN_CALL_STMT:
+            analyze_fun_call(*stmt.as<FunCallStmt>());
+            break;
         case NodeType::RET_STMT:
             analyze_ret(*stmt.as<RetStmt>());
             break;
@@ -48,11 +51,20 @@ void SemanticAnalyzer::analyze_fun_def(const FunDefStmt &fds) {
         }
         analyze_stmt(*fds.block[i]);
     }
-    if (!has_ret_in_glob) {
+    if (!has_ret_in_glob && fds.ret_type.kind != TypeKind::NOTH) {
         diag_part_create(diag, 26, fds.pos, DiagLevel::ERROR, "");
     }
     vars.pop();
     fun_ret_types.pop();
+}
+
+void SemanticAnalyzer::analyze_fun_call(const FunCallStmt &fcs) {
+    std::vector<NodeUPTR> args(fcs.args.size());
+    for (int i = 0; i < args.size(); ++i) {
+        args[i] = fcs.args[i]->clone();
+    }
+    FunCallExpr fce(fcs.fun_name, std::move(args), fcs.pos);
+    analyze_fun_call_expr(fce);
 }
 
 void SemanticAnalyzer::analyze_ret(const RetStmt &rs) {
