@@ -1,6 +1,7 @@
 #pragma once
 #include "../lexer/token.h"
 #include "../position.h"
+#include <iostream>
 #include <sstream>
 #include <memory>
 #include <vector>
@@ -22,8 +23,6 @@ struct Node {
 
     explicit Node(NodeType type, Position pos) : type(type), pos(pos) {}
     virtual ~Node() = default;
-    
-    static NodeType get_type();
 
     template<typename TNode>
     TNode *as() {

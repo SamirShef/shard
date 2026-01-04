@@ -2,11 +2,22 @@
 
 void CodeGenerator::generate() {
     for (const auto &stmt : stmts) {
-        switch (stmt->type) {
-            case NodeType::VAR_DEF_STMT:
-                generate_var_def(*stmt->as<VarDefStmt>());
-            default: {}
-        }
+        generate_stmt(*stmt);
+    }
+}
+
+void CodeGenerator::generate_stmt(const Node &stmt) {
+    switch (stmt.type) {
+        case NodeType::VAR_DEF_STMT:
+            generate_var_def(*stmt.as<VarDefStmt>());
+            break;
+        case NodeType::FUN_DEF_STMT:
+            generate_fun_def(*stmt.as<FunDefStmt>());
+            break;
+        case NodeType::RET_STMT:
+            generate_ret(*stmt.as<RetStmt>());
+            break;
+        default: {}
     }
 }
 
@@ -16,10 +27,47 @@ void CodeGenerator::generate_var_def(const VarDefStmt &vds) {
     if (initializer->getType() != var_type) {
         initializer = implicitly_cast(initializer, var_type);
     }
-    auto var = new llvm::GlobalVariable(var_type, vds.type.is_const,
-                                                                llvm::GlobalValue::ExternalLinkage,
-                                                                llvm::dyn_cast_or_null<llvm::Constant>(initializer), vds.name);
+    auto var = new llvm::GlobalVariable(var_type, vds.type.is_const, llvm::GlobalValue::ExternalLinkage, llvm::dyn_cast_or_null<llvm::Constant>(initializer), vds.name);
     vars.top().emplace(vds.name, initializer);
+}
+
+void CodeGenerator::generate_fun_def(const FunDefStmt &fds) {
+    std::vector<llvm::Type*> args_types(fds.args.size());
+    for (int i = 0; i < args_types.size(); ++i) {
+        args_types[i] = type_kind_to_llvm(fds.args[i].type.kind);
+    }
+    llvm::FunctionType *ret_type = llvm::FunctionType::get(type_kind_to_llvm(fds.ret_type.kind), args_types, false);
+    llvm::Function *fun = llvm::Function::Create(ret_type, llvm::GlobalValue::ExternalLinkage, fds.name, *module);
+    llvm::BasicBlock *entry = llvm::BasicBlock::Create(context, "entry", fun);
+    builder.SetInsertPoint(entry);
+    vars.push({});
+    functions.emplace(fds.name, fun);
+    u64 index = 0;
+    for (llvm::Argument &arg : fun->args()) {
+        arg.setName(fds.args[index].name);
+        llvm::AllocaInst *arg_alloca = builder.CreateAlloca(arg.getType(), nullptr, fds.args[index].name);
+        builder.CreateStore(&arg, arg_alloca);
+        vars.top().emplace(fds.args[index].name, arg_alloca);
+        ++index;
+    }
+    fun_ret_types.push(fun->getReturnType());
+    for (auto &stmt : fds.block) {
+        generate_stmt(*stmt);
+    }
+    fun_ret_types.pop();
+}
+
+void CodeGenerator::generate_ret(const RetStmt &rs) {
+    if (!rs.expr) {
+        builder.CreateRetVoid();
+    }
+    else {
+        llvm::Value *val = generate_expr(*rs.expr);
+        if (val->getType() != fun_ret_types.top()) {
+            val = implicitly_cast(val, fun_ret_types.top());
+        }
+        builder.CreateRet(val);
+    }
 }
 
 llvm::Value *CodeGenerator::generate_expr(const Node &expr) {
@@ -32,7 +80,11 @@ llvm::Value *CodeGenerator::generate_expr(const Node &expr) {
             return generate_unary_expr(*expr.as<UnaryExpr>());
         case NodeType::VAR_EXPR:
             return generate_var_expr(*expr.as<VarExpr>());
+        case NodeType::FUN_CALL_EXPR:
+            return generate_fun_call_expr(*expr.as<FunCallExpr>());
+        default: {}
     }
+    return nullptr;
 }
 
 llvm::Value *CodeGenerator::generate_binary_expr(const BinaryExpr &be) {
@@ -175,6 +227,15 @@ llvm::Value *CodeGenerator::generate_var_expr(const VarExpr &ve) {
         }
         vars_copy.pop();
     }
+}
+
+llvm::Value *CodeGenerator::generate_fun_call_expr(const FunCallExpr &fce) {
+    llvm::Function *fun = functions.at(fce.fun_name);
+    std::vector<llvm::Value*> args(fce.args.size());
+    for (int i = 0; i < args.size(); ++i) {
+        args[i] = generate_expr(*fce.args[i]);
+    }
+    return builder.CreateCall(fun, args, fce.fun_name + ".call");
 }
 
 llvm::Type *CodeGenerator::get_common_type(llvm::Type *LHS, llvm::Type *RHS) {

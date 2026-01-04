@@ -481,7 +481,7 @@ const char Lexer::get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p) {
             advanve();
             u16 val = 0;
             u8 digits_count = 0;
-            for (int i = 0; pos < src.length() && i < 3; i++) {
+            for (int i = 0; pos < src.length() && i < 3; ++i) {
                 if (isdigit(peek()) && peek() < '8') {
                     val = val * 8 + peek() - '0';
                     digits_count++;
@@ -507,7 +507,7 @@ const char Lexer::get_escape_sequence(u64 tmp_l, u64 tmp_c, u64 tmp_p) {
             advanve();
             u16 val = 0;
             u8 digits_count = 0;
-            for (int i = 0; pos < src.length() && i < 2; i++) {
+            for (int i = 0; pos < src.length() && i < 2; ++i) {
                 if (isdigit(peek())) {
                     val = val * 16 + peek() - '0';
                     digits_count++;

@@ -9,14 +9,15 @@
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Type.h>
 #include <stack>
-#include <map>
 
 class CodeGenerator {
     std::vector<NodeUPTR> &stmts;
     llvm::LLVMContext context;
     llvm::IRBuilder<> builder;
     std::unique_ptr<llvm::Module> module;
-    std::stack<std::map<std::string, llvm::Value*>> vars;
+    std::stack<std::unordered_map<std::string, llvm::Value*>> vars;
+    std::unordered_map<std::string, llvm::Function*> functions;
+    std::stack<llvm::Type*> fun_ret_types;
 
 public:
     CodeGenerator(std::vector<NodeUPTR> &stmts, std::string file_name) : stmts(stmts), context(), builder(context),
@@ -35,13 +36,17 @@ public:
     }
 
 private:
+    void generate_stmt(const Node &stmt);
     void generate_var_def(const VarDefStmt &vds);
+    void generate_fun_def(const FunDefStmt &fds);
+    void generate_ret(const RetStmt &rs);
 
     llvm::Value *generate_expr(const Node &expr);
     llvm::Value *generate_binary_expr(const BinaryExpr &be);
     llvm::Value *generate_unary_expr(const UnaryExpr &ue);
     llvm::Value *generate_literal_expr(const LiteralExpr &le);
     llvm::Value *generate_var_expr(const VarExpr &ve);
+    llvm::Value *generate_fun_call_expr(const FunCallExpr &fce);
 
     llvm::Type *get_common_type(llvm::Type *LHS, llvm::Type *RHS);
     llvm::Value *implicitly_cast(llvm::Value *dest, llvm::Type *expected);

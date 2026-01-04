@@ -324,7 +324,7 @@ const Type Parser::consume_type() {
 
 u64 Parser::get_end_line_pos(Token start_token) const {
     u64 i;
-    for (i = pos; i < tokens.size() - 1 && tokens[i].pos.line == start_token.pos.line; i++);
+    for (i = pos; i < tokens.size() - 1 && tokens[i].pos.line == start_token.pos.line; ++i);
     if (i == tokens.size()) {
         return tokens[i - 1].pos.pos + tokens[i - 1].pos.len;
     }
