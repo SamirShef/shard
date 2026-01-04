@@ -18,6 +18,9 @@ void SemanticAnalyzer::analyze_stmt(const Node &stmt) {
         case NodeType::VAR_DEF_STMT:
             analyze_var_def(*stmt.as<VarDefStmt>());
             break;
+        case NodeType::VAR_ASGN_STMT:
+            analyze_var_asgn(*stmt.as<VarAsgnStmt>());
+            break;
         case NodeType::FUN_DEF_STMT:
             analyze_fun_def(*stmt.as<FunDefStmt>());
             break;
@@ -37,6 +40,25 @@ void SemanticAnalyzer::analyze_var_def(const VarDefStmt &vds) {
     ExprVal expr = vds.expr ? analyze_expr(*vds.expr).cast_to(type_kind_to_expr_val_type(vds.type.kind)) :
                    ExprVal::get_default(type_kind_to_expr_val_type(vds.type.kind));
     vars.top().emplace(vds.name, expr);
+}
+
+void SemanticAnalyzer::analyze_var_asgn(const VarAsgnStmt &vas) {
+    std::stack<std::unordered_map<std::string, ExprVal>> vars_copy;
+    while (!vars.empty()) {
+        for (auto &var : vars.top()) {
+            if (var.first == vas.name) {
+                var.second = analyze_expr(*vas.expr);
+                while (!vars_copy.empty()) {
+                    vars.push(vars_copy.top());
+                    vars_copy.pop();
+                }
+                return;
+            }
+        }
+        vars_copy.push(vars.top());
+        vars.pop();
+    }
+    diag_part_create(diag, 22, vas.pos, DiagLevel::ERROR, "Variable `" + vas.name + "` is undeclared in current space.");
 }
 
 void SemanticAnalyzer::analyze_fun_def(const FunDefStmt &fds) {
