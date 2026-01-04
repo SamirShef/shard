@@ -1,3 +1,4 @@
+#include "include/sema/sema.h"
 #include "include/type_checker/type_checker.h"
 #include "include/diagnostic/diagnostic.h"
 #include "include/codegen/codegen.h"
@@ -93,8 +94,12 @@ int main(int argc, char **argv) {
     }
     print_errs_and_clear(diag);
 
-    TypeChecker type_checker(diag, stmts);
+    TypeChecker type_checker(diag, stmts);      // only types checking
     type_checker.analyze();
+    print_errs_and_clear(diag);
+
+    SemanticAnalyzer sema(diag, stmts);         // deep semantic (evaluation of expressions and more)
+    sema.analyze();
     print_errs_and_clear(diag);
 
     CodeGenerator codegen(stmts, flags.file_path);

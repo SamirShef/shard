@@ -28,5 +28,7 @@ static std::vector<std::string> err_msgs {
     "Variable does not declared.",
     "Invalid variable type.",
     "Function does not declared.",
-    "The number of arguments in the function does not match."
+    "The number of arguments in the function does not match.",
+    "Not all paths return a value.",
+    "Division by zero."
 };
