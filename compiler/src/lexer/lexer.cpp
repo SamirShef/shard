@@ -400,7 +400,7 @@ Token Lexer::tokenize_op() {
         case '%': {
             if (pos < src.length() && peek() == '=') {
                 val += advanve();
-                return TOKEN(PRECENT_EQ);
+                return TOKEN(PERCENT_EQ);
             }
             return TOKEN(PERCENT);
         }

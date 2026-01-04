@@ -60,7 +60,7 @@ enum class TokenKind {
     MINUS_EQ,       // `-=`
     STAR_EQ,        // `*=`
     SLASH_EQ,       // `/=`
-    PRECENT_EQ,     // `%=`
+    PERCENT_EQ,     // `%=`
     CARET,          // `^`
 
     UNKNOWN,        // Unknown token, not expected by the lexer
