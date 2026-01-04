@@ -1,4 +1,6 @@
 #include "../include/codegen/codegen.h"
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
 
 void CodeGenerator::generate() {
     for (const auto &stmt : stmts) {
@@ -25,7 +27,13 @@ void CodeGenerator::generate_stmt(const Node &stmt) {
 }
 
 void CodeGenerator::generate_var_def(const VarDefStmt &vds) {
-    llvm::Value *initializer = generate_expr(*vds.expr);
+    llvm::Value *initializer;
+    if (vds.expr) {
+        initializer = generate_expr(*vds.expr);
+    }
+    else {
+        initializer = get_default_value(vds.type);
+    }
     llvm::Type *var_type = type_kind_to_llvm(vds.type.kind);
     if (initializer->getType() != var_type) {
         initializer = implicitly_cast(initializer, var_type);
@@ -330,5 +338,27 @@ llvm::Type *CodeGenerator::type_kind_to_llvm(TypeKind kind) {
         case TypeKind::NOTH:
             return TYPE(getVoidTy);
         #undef TYPE
+    }
+}
+
+llvm::Value *CodeGenerator::get_default_value(Type type) {
+    switch (type.kind) {
+        #define DEFAULT(func) llvm::ConstantInt::get(llvm::Type::func(context), 0)
+        case TypeKind::BOOL:
+            return DEFAULT(getInt1Ty);
+        case TypeKind::CHAR:
+            return DEFAULT(getInt8Ty);
+        case TypeKind::I16:
+            return DEFAULT(getInt16Ty);
+        case TypeKind::I32:
+            return DEFAULT(getInt32Ty);
+        case TypeKind::I64:
+            return DEFAULT(getInt64Ty);
+        case TypeKind::F32:
+            return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0);
+        case TypeKind::F64:
+            return llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0);
+        default: {}
+        #undef DEFAULT
     }
 }

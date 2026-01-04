@@ -52,4 +52,5 @@ private:
     llvm::Type *get_common_type(llvm::Type *LHS, llvm::Type *RHS);
     llvm::Value *implicitly_cast(llvm::Value *dest, llvm::Type *expected);
     llvm::Type *type_kind_to_llvm(TypeKind kind);
+    llvm::Value *get_default_value(Type type);
 };

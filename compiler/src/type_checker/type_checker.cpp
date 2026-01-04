@@ -38,7 +38,9 @@ void TypeChecker::analyze_var_def(const VarDefStmt &vds) {
         vars.top().emplace(vds.name, vds.type);
         return;
     }
-    implicitly_cast(analyze_expr(*vds.expr), vds.type, vds.expr->pos);
+    if (vds.expr) {
+        implicitly_cast(analyze_expr(*vds.expr), vds.type, vds.expr->pos);
+    }
     vars.top().emplace(vds.name, vds.type);
 }
 
