@@ -14,6 +14,9 @@ void CodeGenerator::generate_stmt(const Node &stmt) {
         case NodeType::FUN_DEF_STMT:
             generate_fun_def(*stmt.as<FunDefStmt>());
             break;
+        case NodeType::FUN_CALL_STMT:
+            generate_fun_call(*stmt.as<FunCallStmt>());
+            break;
         case NodeType::RET_STMT:
             generate_ret(*stmt.as<RetStmt>());
             break;
@@ -58,6 +61,15 @@ void CodeGenerator::generate_fun_def(const FunDefStmt &fds) {
         builder.CreateRetVoid();
     }
     fun_ret_types.pop();
+}
+
+void CodeGenerator::generate_fun_call(const FunCallStmt &fcs) {
+    llvm::Function *fun = functions.at(fcs.fun_name);
+    std::vector<llvm::Value*> args(fcs.args.size());
+    for (int i = 0; i < args.size(); ++i) {
+        args[i] = generate_expr(*fcs.args[i]);
+    }
+    builder.CreateCall(fun, args, fcs.fun_name + ".call");
 }
 
 void CodeGenerator::generate_ret(const RetStmt &rs) {
