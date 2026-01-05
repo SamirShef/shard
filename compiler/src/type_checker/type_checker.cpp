@@ -175,6 +175,7 @@ Type TypeChecker::analyze_binary_expr(const BinaryExpr &be) {
         case TokenKind::STAR:
         case TokenKind::SLASH:
         case TokenKind::PERCENT:
+        case TokenKind::EQ_EQ:
         case TokenKind::GT:
         case TokenKind::GT_EQ:
         case TokenKind::LT:
