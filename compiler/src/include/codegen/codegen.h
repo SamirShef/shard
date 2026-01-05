@@ -19,6 +19,8 @@ class CodeGenerator {
     std::unordered_map<std::string, llvm::Function*> functions;
     std::stack<llvm::Type*> fun_ret_types;
 
+    std::stack<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>> loop_blocks;    // first - start of loop, second - end of loop
+
 public:
     CodeGenerator(std::vector<NodeUPTR> &stmts, std::string file_name) : stmts(stmts), context(), builder(context),
                                                                          module(std::make_unique<llvm::Module>(file_name, context)) {
@@ -44,6 +46,8 @@ private:
     void generate_ret(const RetStmt &rs);
     void generate_if_else(const IfElseStmt &ies);
     void generate_for(const ForStmt &fs);
+    void generate_break();
+    void generate_continue();
 
     llvm::Value *generate_expr(const Node &expr);
     llvm::Value *generate_binary_expr(const BinaryExpr &be);

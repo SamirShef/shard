@@ -29,6 +29,12 @@ void CodeGenerator::generate_stmt(const Node &stmt) {
         case NodeType::FOR_STMT:
             generate_for(*stmt.as<ForStmt>());
             break;
+        case NodeType::BREAK_STMT:
+            generate_break();
+            break;
+        case NodeType::CONTINUE_STMT:
+            generate_continue();
+            break;
         default: {}
     }
 }
@@ -179,9 +185,14 @@ void CodeGenerator::generate_for(const ForStmt &fs) {
     builder.CreateCondBr(cond, block_bb, exit_bb);
     builder.SetInsertPoint(block_bb);
     vars.push({});
+    loop_blocks.push(std::make_pair(change_index_bb, exit_bb));
     for (auto& stmt : fs.block) {
         generate_stmt(*stmt);
+        if (stmt->type == NodeType::BREAK_STMT) {
+            break;
+        }
     }
+    loop_blocks.pop();
     vars.pop();
 
     builder.CreateBr(change_index_bb);
@@ -192,6 +203,14 @@ void CodeGenerator::generate_for(const ForStmt &fs) {
 
     builder.CreateBr(cond_bb);
     builder.SetInsertPoint(exit_bb);
+}
+
+void CodeGenerator::generate_break() {
+    builder.CreateBr(loop_blocks.top().second);
+}
+
+void CodeGenerator::generate_continue() {
+    builder.CreateBr(loop_blocks.top().first);
 }
 
 llvm::Value *CodeGenerator::generate_expr(const Node &expr) {

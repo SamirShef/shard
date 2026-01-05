@@ -66,11 +66,11 @@ void SemanticAnalyzer::analyze_var_asgn(const VarAsgnStmt &vas) {
     while (!vars.empty()) {
         for (auto &var : vars.top()) {
             if (var.first == vas.name) {
-                var.second = analyze_expr(*vas.expr);
                 while (!vars_copy.empty()) {
                     vars.push(vars_copy.top());
                     vars_copy.pop();
                 }
+                var.second = analyze_expr(*vas.expr);
                 return;
             }
         }
