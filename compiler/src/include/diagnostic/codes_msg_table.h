@@ -37,6 +37,7 @@ static std::vector<std::string> err_msgs {
     "The value of a constant cannot be changed.",
     "`break` must be inside the loop.",
     "`continue` must be inside the loop.",
+    "Unsupported member of the structure."
 };
 
 static std::vector<std::string> war_msgs {

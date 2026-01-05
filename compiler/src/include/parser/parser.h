@@ -17,14 +17,15 @@ public:
 
 private:
     // statements
-    NodeUPTR parse_stmt();
-    NodeUPTR parse_var_def_stmt();
-    NodeUPTR parse_var_asgn_stmt();
-    NodeUPTR parse_fun_def_stmt();
-    NodeUPTR parse_fun_call_stmt();
-    NodeUPTR parse_return_stmt();
-    NodeUPTR parse_if_else_stmt();
-    NodeUPTR parse_for_stmt();
+    NodeUPTR parse_stmt(bool skip_semi = true);
+    NodeUPTR parse_var_def_stmt(AccessModifier access);
+    NodeUPTR parse_var_asgn_stmt(AccessModifier access);
+    NodeUPTR parse_fun_def_stmt(AccessModifier access);
+    NodeUPTR parse_fun_call_stmt(AccessModifier access);
+    NodeUPTR parse_return_stmt(AccessModifier access);
+    NodeUPTR parse_if_else_stmt(AccessModifier access);
+    NodeUPTR parse_for_stmt(AccessModifier access);
+    NodeUPTR parse_struct_stmt(AccessModifier access);
 
     // expressions
     NodeUPTR parse_expr();

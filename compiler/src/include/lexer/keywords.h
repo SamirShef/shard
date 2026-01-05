@@ -21,4 +21,6 @@ static std::unordered_map<std::string, TokenKind> keywords {
     { "for", TokenKind::FOR },
     { "break", TokenKind::BREAK },
     { "continue", TokenKind::CONTINUE },
+    { "struct", TokenKind::STRUCT },
+    { "pub", TokenKind::PUB },
 };
