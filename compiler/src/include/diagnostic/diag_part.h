@@ -19,10 +19,10 @@ struct DiagPart {
                 res << COLOR_RED << "error [E" << std::setfill('0') << std::setw(4) << code << "]";
                 break;
             case DiagLevel::WARNING:
-                res << COLOR_BLUE << "warning [E" << std::setfill('0') << std::setw(4) << code << "]";
+                res << COLOR_YELLOW << "warning [W" << std::setfill('0') << std::setw(4) << code << "]";
                 break;
             case DiagLevel::NOTE:
-                res << COLOR_YELLOW << "note [E" << std::setfill('0') << std::setw(4) << code << "]";
+                res << COLOR_GREEN << "note [N" << std::setfill('0') << std::setw(4) << code << "]";
                 break;
         }
         res << " at: " << COLOR_RESET << pos.file_name << ':' << pos.to_str() << '\n' << msg;

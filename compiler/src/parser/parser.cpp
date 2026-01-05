@@ -48,8 +48,23 @@ NodeUPTR Parser::parse_var_def_stmt() {
         diag_part_create(diag, err, "keyword or operator");
     }
     consume(TokenKind::COLON, 15, "expected `:`");
+    const Token type_start = peek();
     Type type = consume_type();
-    type.is_const = is_const;
+    if (!type.is_const) {
+        type.is_const = is_const;
+    }
+    else {
+        if (!is_const) {
+            DiagPart err { .pos = { .file_name = type_start.pos.file_name, .line = type_start.pos.line, .column = type_start.pos.column,
+                           .pos = type_start.pos.pos }, .level = DiagLevel::ERROR, .code = 29 };
+            diag_part_create(diag, err, "");
+        }
+        else {
+            DiagPart war { .pos = { .file_name = type_start.pos.file_name, .line = type_start.pos.line, .column = type_start.pos.column,
+                           .pos = type_start.pos.pos }, .level = DiagLevel::WARNING, .code = 0 };
+            diag_part_create(diag, war, "");
+        }
+    }
 
     NodeUPTR expr = nullptr;
     if (match(TokenKind::EQ)) {
@@ -333,25 +348,26 @@ const Token Parser::consume_semi() {
 }
 
 const Type Parser::consume_type() {
+    bool is_const = match(TokenKind::CONST);
     const Token type = advance();
     if (is_type(type.kind)) {
         switch (type.kind) {
             case TokenKind::BOOL:
-                return Type(TypeKind::BOOL);
+                return Type(TypeKind::BOOL, is_const);
             case TokenKind::CHAR:
-                return Type(TypeKind::CHAR);
+                return Type(TypeKind::CHAR, is_const);
             case TokenKind::I16:
-                return Type(TypeKind::I16);
+                return Type(TypeKind::I16, is_const);
             case TokenKind::I32:
-                return Type(TypeKind::I32);
+                return Type(TypeKind::I32, is_const);
             case TokenKind::I64:
-                return Type(TypeKind::I64);
+                return Type(TypeKind::I64, is_const);
             case TokenKind::F32:
-                return Type(TypeKind::F32);
+                return Type(TypeKind::F32, is_const);
             case TokenKind::F64:
-                return Type(TypeKind::F64);
+                return Type(TypeKind::F64, is_const);
             case TokenKind::NOTH:
-                return Type(TypeKind::NOTH);
+                return Type(TypeKind::NOTH, is_const);
         }
     }
     DiagPart err { .pos = { .file_name = type.pos.file_name, .line = type.pos.line, .column = type.pos.column, .pos = type.pos.pos },

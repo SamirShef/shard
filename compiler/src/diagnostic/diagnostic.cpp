@@ -23,13 +23,31 @@ void Diagnostic::clear() {
     errs.clear();
 }
 
-std::string get_msg_by_code(u16 code) {
-    return err_msgs.at(code);
+std::string get_msg_by_code(u16 code, DiagLevel level) {
+    switch (level) {
+        case DiagLevel::ERROR:
+            return err_msgs.at(code);
+        case DiagLevel::WARNING:
+            return war_msgs.at(code);
+        case DiagLevel::NOTE:
+            return notes_msgs.at(code);
+    }
 }
 
 void diag_part_create(Diagnostic &diag, DiagPart part, std::string err_msg) {
     std::ostringstream msg;
-    msg << COLOR_RED << get_msg_by_code(part.code) << '\n' << COLOR_RESET;
+    switch (part.level) {
+        case DiagLevel::ERROR:
+            msg << COLOR_RED;
+            break;
+        case DiagLevel::WARNING:
+            msg << COLOR_YELLOW;
+            break;
+        case DiagLevel::NOTE:
+            msg << COLOR_GREEN;
+            break;
+    }
+    msg << get_msg_by_code(part.code, part.level) << '\n' << COLOR_RESET;
     msg << err_msg;
     part.msg = msg.str();
     diag.add_part(part);
@@ -38,7 +56,18 @@ void diag_part_create(Diagnostic &diag, DiagPart part, std::string err_msg) {
 void diag_part_create(Diagnostic &diag, u16 code, Position pos, DiagLevel level, std::string err_msg) {
     DiagPart err { .pos = pos, .level = level, .code = code, };
     std::ostringstream msg;
-    msg << COLOR_RED << get_msg_by_code(err.code) << '\n' << COLOR_RESET;
+    switch (level) {
+        case DiagLevel::ERROR:
+            msg << COLOR_RED;
+            break;
+        case DiagLevel::WARNING:
+            msg << COLOR_YELLOW;
+            break;
+        case DiagLevel::NOTE:
+            msg << COLOR_GREEN;
+            break;
+    }
+    msg << get_msg_by_code(err.code, level) << '\n' << COLOR_RESET;
     msg << err_msg;
     err.msg = msg.str();
     diag.add_part(err);

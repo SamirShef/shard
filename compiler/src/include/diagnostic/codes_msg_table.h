@@ -31,5 +31,14 @@ static std::vector<std::string> err_msgs {
     "The number of arguments in the function does not match.",
     "Not all paths return a value.",
     "Division by zero.",
-    "Assigning a global variable in a global scope."
+    "Assigning a global variable in a global scope.",
+    "A variable defined using the `var` keyword cannot have a constant type."
+};
+
+static std::vector<std::string> war_msgs {
+    "The constant has the type with the modifier `const`."
+};
+
+static std::vector<std::string> notes_msgs {
+    
 };
