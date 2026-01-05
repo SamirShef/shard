@@ -29,6 +29,12 @@ void TypeChecker::analyze_stmt(const Node &stmt) {
         case NodeType::RET_STMT:
             analyze_ret(*stmt.as<RetStmt>());
             break;
+        case NodeType::IF_ELSE_STMT:
+            analyze_if_else(*stmt.as<IfElseStmt>());
+            break;
+        case NodeType::FOR_STMT:
+            analyze_for(*stmt.as<ForStmt>());
+            break;
         default:
             diag_part_create(diag, 21, stmt.pos, DiagLevel::ERROR, "");
             break;
@@ -106,6 +112,37 @@ void TypeChecker::analyze_ret(const RetStmt &rs) {
     }
 }
 
+void TypeChecker::analyze_if_else(const IfElseStmt &ies) {
+    Type cond_type = analyze_expr(*ies.cond);
+    implicitly_cast(cond_type, Type(TypeKind::BOOL), ies.cond->pos);
+    vars.push({});
+    for (auto &stmt : ies.then_branch) {
+        analyze_stmt(*stmt);
+    }
+    vars.pop();
+    vars.push({});
+    for (auto &stmt : ies.false_branch) {
+        analyze_stmt(*stmt);
+    }
+    vars.pop();
+}
+
+void TypeChecker::analyze_for(const ForStmt &fs) {
+    vars.push({});
+    if (fs.index) {
+        analyze_stmt(*fs.index);
+    }
+    Type cond_type = analyze_expr(*fs.cond);
+    implicitly_cast(cond_type, Type(TypeKind::BOOL), fs.cond->pos);
+    if (fs.change_index) {
+        analyze_stmt(*fs.change_index);
+    }
+    for (auto &stmt : fs.block) {
+        analyze_stmt(*stmt);
+    }
+    vars.pop();
+}
+
 Type TypeChecker::analyze_expr(const Node &expr) {
     switch (expr.type) {
         case NodeType::LITERAL_EXPR:
@@ -145,25 +182,39 @@ Type TypeChecker::analyze_binary_expr(const BinaryExpr &be) {
             if (!((int)LHS.kind >= (int)TypeKind::CHAR && (int)LHS.kind <= (int)TypeKind::F64) ||
                 !((int)RHS.kind >= (int)TypeKind::CHAR && (int)RHS.kind <= (int)TypeKind::F64)) {
                 diag_part_create(diag, 18, be.pos, DiagLevel::ERROR, "Cannot use `" + be.op.val + "` with `" + LHS.to_str() + "` and `" + RHS.to_str() + "` types.");
+                break;
             }
-            break;
+            else {
+                if (be.op.kind <= TokenKind::PERCENT) {
+                    return get_common_type(LHS, RHS, be.op.pos);
+                }
+                else if (be.op.kind > TokenKind::PERCENT && be.op.kind <= TokenKind::LT_EQ) {
+                    return Type(TypeKind::BOOL);
+                }
+                break;
+            }
         case TokenKind::LOG_AND:
         case TokenKind::LOG_OR:
             if (LHS.kind != TypeKind::BOOL || RHS.kind != TypeKind::BOOL) {
                 diag_part_create(diag, 18, be.pos, DiagLevel::ERROR, "Cannot use `" + be.op.val + "` with `" + LHS.to_str() + "` and `" + RHS.to_str() + "` types (expected `bool` type).");
+                break;
             }
-            break;
+            else {
+                return Type(TypeKind::BOOL);
+            }
         case TokenKind::AND:
         case TokenKind::OR:
             if (!((int)LHS.kind >= (int)TypeKind::CHAR && (int)LHS.kind <= (int)TypeKind::I64) ||
                 !((int)RHS.kind >= (int)TypeKind::CHAR && (int)RHS.kind <= (int)TypeKind::I64)) {
                 diag_part_create(diag, 18, be.pos, DiagLevel::ERROR, "Cannot use `" + be.op.val + "` with `" + LHS.to_str() + "` and `" + RHS.to_str() + "` types (expected integer type).");
+                break;
             }
-            break;
-        default: {}
+            else {
+                return get_common_type(LHS, RHS, be.op.pos);
+            }
+        default:
+            return get_common_type(LHS, RHS, be.op.pos);
     }
-
-    return get_common_type(LHS, RHS, be.op.pos);
 }
 
 Type TypeChecker::analyze_unary_expr(const UnaryExpr &ue) {

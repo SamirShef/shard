@@ -30,6 +30,12 @@ void SemanticAnalyzer::analyze_stmt(const Node &stmt) {
         case NodeType::RET_STMT:
             analyze_ret(*stmt.as<RetStmt>());
             break;
+        case NodeType::IF_ELSE_STMT:
+            analyze_if_else(*stmt.as<IfElseStmt>());
+            break;
+        case NodeType::FOR_STMT:
+            analyze_for(*stmt.as<ForStmt>());
+            break;
         default:
             diag_part_create(diag, 21, stmt.pos, DiagLevel::ERROR, "");
             break;
@@ -99,6 +105,34 @@ void SemanticAnalyzer::analyze_fun_call(const FunCallStmt &fcs) {
 void SemanticAnalyzer::analyze_ret(const RetStmt &rs) {
     ExprVal expr = rs.expr ? analyze_expr(*rs.expr) : ExprVal(ExprValType::NOTH, ExprVal::Data { .i32_val = 0 });
     implicitly_cast(Type(expr_val_type_to_type_kind(expr.type)), fun_ret_types.top(), rs.pos);
+}
+
+void SemanticAnalyzer::analyze_if_else(const IfElseStmt &ies) {
+    ExprVal cond = analyze_expr(*ies.cond);
+    vars.push({});
+    for (auto &stmt : ies.then_branch) {
+        analyze_stmt(*stmt);
+    }
+    vars.pop();
+    vars.push({});
+    for (auto &stmt : ies.false_branch) {
+        analyze_stmt(*stmt);
+    }
+    vars.pop();
+}
+
+void SemanticAnalyzer::analyze_for(const ForStmt &fs) {
+    vars.push({});
+    if (fs.index) {
+        analyze_stmt(*fs.index);
+    }
+    if (fs.change_index) {
+        analyze_stmt(*fs.change_index);
+    }
+    for (auto &stmt : fs.block) {
+        analyze_stmt(*stmt);
+    }
+    vars.pop();
 }
 
 SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_expr(const Node &expr) {

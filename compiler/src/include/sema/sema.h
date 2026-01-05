@@ -133,6 +133,8 @@ private:
     void analyze_fun_def(const FunDefStmt &fds);
     void analyze_fun_call(const FunCallStmt &fcs);
     void analyze_ret(const RetStmt &rs);
+    void analyze_if_else(const IfElseStmt &ies);
+    void analyze_for(const ForStmt &fs);
 
     ExprVal analyze_expr(const Node &expr);
     ExprVal analyze_literal_expr(const LiteralExpr &le);

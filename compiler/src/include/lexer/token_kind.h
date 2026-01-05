@@ -46,10 +46,6 @@ enum class TokenKind {
     EQ_EQ,          // `==`
     BANG,           // `!`
     BANG_EQ,        // `!=`
-    LT,             // `<`
-    GT,             // `>`
-    LT_EQ,          // `<=`
-    GT_EQ,          // `>=`
     AND,            // '&`
     OR,             // `|`
     LOG_AND,        // '&&`
@@ -64,6 +60,10 @@ enum class TokenKind {
     STAR_EQ,        // `*=`
     SLASH_EQ,       // `/=`
     PERCENT_EQ,     // `%=`
+    LT,             // `<`
+    GT,             // `>`
+    LT_EQ,          // `<=`
+    GT_EQ,          // `>=`
     CARET,          // `^`
 
     UNKNOWN,        // Unknown token, not expected by the lexer
