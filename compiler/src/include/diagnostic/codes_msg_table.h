@@ -34,7 +34,9 @@ static std::vector<std::string> err_msgs {
     "Cannot be used in the global scope.",
     "A variable defined using the `var` keyword cannot have a constant type.",
     "Assigning a variable requires an expression.",
-    "The value of a constant cannot be changed."
+    "The value of a constant cannot be changed.",
+    "`break` must be inside the loop.",
+    "`continue` must be inside the loop.",
 };
 
 static std::vector<std::string> war_msgs {

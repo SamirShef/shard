@@ -36,6 +36,12 @@ void SemanticAnalyzer::analyze_stmt(const Node &stmt) {
         case NodeType::FOR_STMT:
             analyze_for(*stmt.as<ForStmt>());
             break;
+        case NodeType::BREAK_STMT:
+            analyze_break(*stmt.as<BreakStmt>());
+            break;
+        case NodeType::CONTINUE_STMT:
+            analyze_continue(*stmt.as<ContinueStmt>());
+            break;
         default:
             diag_part_create(diag, 21, stmt.pos, DiagLevel::ERROR, "");
             break;
@@ -135,6 +141,7 @@ void SemanticAnalyzer::analyze_for(const ForStmt &fs) {
         diag_part_create(diag, 28, fs.pos, DiagLevel::ERROR, "`for` statement");
     }
     vars.push({});
+    ++loop_depth;
     if (fs.index) {
         analyze_stmt(*fs.index);
     }
@@ -144,7 +151,26 @@ void SemanticAnalyzer::analyze_for(const ForStmt &fs) {
     for (auto &stmt : fs.block) {
         analyze_stmt(*stmt);
     }
+    --loop_depth;
     vars.pop();
+}
+
+void SemanticAnalyzer::analyze_break(const BreakStmt &bs) {
+    if (fun_ret_types.empty()) {
+        diag_part_create(diag, 28, bs.pos, DiagLevel::ERROR, "`break` statement");
+    }
+    if (loop_depth == 0) {
+        diag_part_create(diag, 32, bs.pos, DiagLevel::ERROR, "");
+    }
+}
+
+void SemanticAnalyzer::analyze_continue(const ContinueStmt &cs) {
+    if (fun_ret_types.empty()) {
+        diag_part_create(diag, 28, cs.pos, DiagLevel::ERROR, "`continue` statement");
+    }
+    if (loop_depth == 0) {
+        diag_part_create(diag, 33, cs.pos, DiagLevel::ERROR, "");
+    }
 }
 
 SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_expr(const Node &expr) {
