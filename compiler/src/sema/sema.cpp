@@ -50,7 +50,7 @@ void SemanticAnalyzer::analyze_var_def(const VarDefStmt &vds) {
 
 void SemanticAnalyzer::analyze_var_asgn(const VarAsgnStmt &vas) {
     if (fun_ret_types.empty()) {
-        diag_part_create(diag, 28, vas.pos, DiagLevel::ERROR, "");
+        diag_part_create(diag, 28, vas.pos, DiagLevel::ERROR, "variable assignment");
     }
     if (!vas.expr) {
         diag_part_create(diag, 30, vas.pos, DiagLevel::ERROR, "");
@@ -94,6 +94,9 @@ void SemanticAnalyzer::analyze_fun_def(const FunDefStmt &fds) {
 }
 
 void SemanticAnalyzer::analyze_fun_call(const FunCallStmt &fcs) {
+    if (fun_ret_types.empty()) {
+        diag_part_create(diag, 28, fcs.pos, DiagLevel::ERROR, "function calling");
+    }
     std::vector<NodeUPTR> args(fcs.args.size());
     for (int i = 0; i < args.size(); ++i) {
         args[i] = fcs.args[i]->clone();
@@ -103,11 +106,17 @@ void SemanticAnalyzer::analyze_fun_call(const FunCallStmt &fcs) {
 }
 
 void SemanticAnalyzer::analyze_ret(const RetStmt &rs) {
+    if (fun_ret_types.empty()) {
+        diag_part_create(diag, 28, rs.pos, DiagLevel::ERROR, "`return` statement");
+    }
     ExprVal expr = rs.expr ? analyze_expr(*rs.expr) : ExprVal(ExprValType::NOTH, ExprVal::Data { .i32_val = 0 });
     implicitly_cast(Type(expr_val_type_to_type_kind(expr.type)), fun_ret_types.top(), rs.pos);
 }
 
 void SemanticAnalyzer::analyze_if_else(const IfElseStmt &ies) {
+    if (fun_ret_types.empty()) {
+        diag_part_create(diag, 28, ies.pos, DiagLevel::ERROR, "`if` statement");
+    }
     ExprVal cond = analyze_expr(*ies.cond);
     vars.push({});
     for (auto &stmt : ies.then_branch) {
@@ -122,6 +131,9 @@ void SemanticAnalyzer::analyze_if_else(const IfElseStmt &ies) {
 }
 
 void SemanticAnalyzer::analyze_for(const ForStmt &fs) {
+    if (fun_ret_types.empty()) {
+        diag_part_create(diag, 28, fs.pos, DiagLevel::ERROR, "`for` statement");
+    }
     vars.push({});
     if (fs.index) {
         analyze_stmt(*fs.index);
@@ -188,6 +200,7 @@ SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_binary_expr(const BinaryExpr
         case TokenKind::STAR:
         case TokenKind::SLASH:
         case TokenKind::PERCENT:
+        case TokenKind::EQ_EQ:
         case TokenKind::GT:
         case TokenKind::GT_EQ:
         case TokenKind::LT:

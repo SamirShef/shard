@@ -42,6 +42,8 @@ private:
     void generate_fun_def(const FunDefStmt &fds);
     void generate_fun_call(const FunCallStmt &fcs);
     void generate_ret(const RetStmt &rs);
+    void generate_if_else(const IfElseStmt &ies);
+    void generate_for(const ForStmt &fs);
 
     llvm::Value *generate_expr(const Node &expr);
     llvm::Value *generate_binary_expr(const BinaryExpr &be);

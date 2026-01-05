@@ -43,7 +43,6 @@ enum class TokenKind {
     COLON,          // `:`
     DOLLAR,         // `$`
     EQ,             // `=`
-    EQ_EQ,          // `==`
     BANG,           // `!`
     BANG_EQ,        // `!=`
     AND,            // '&`
@@ -60,6 +59,7 @@ enum class TokenKind {
     STAR_EQ,        // `*=`
     SLASH_EQ,       // `/=`
     PERCENT_EQ,     // `%=`
+    EQ_EQ,          // `==`
     LT,             // `<`
     GT,             // `>`
     LT_EQ,          // `<=`

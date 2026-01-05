@@ -31,7 +31,7 @@ static std::vector<std::string> err_msgs {
     "The number of arguments in the function does not match.",
     "Not all paths return a value.",
     "Division by zero.",
-    "Assigning a global variable in a global scope.",
+    "Cannot be used in the global scope.",
     "A variable defined using the `var` keyword cannot have a constant type.",
     "Assigning a variable requires an expression.",
     "The value of a constant cannot be changed."

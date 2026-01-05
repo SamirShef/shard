@@ -23,6 +23,12 @@ void CodeGenerator::generate_stmt(const Node &stmt) {
         case NodeType::RET_STMT:
             generate_ret(*stmt.as<RetStmt>());
             break;
+        case NodeType::IF_ELSE_STMT:
+            generate_if_else(*stmt.as<IfElseStmt>());
+            break;
+        case NodeType::FOR_STMT:
+            generate_for(*stmt.as<ForStmt>());
+            break;
         default: {}
     }
 }
@@ -118,6 +124,70 @@ void CodeGenerator::generate_ret(const RetStmt &rs) {
         }
         builder.CreateRet(val);
     }
+}
+
+void CodeGenerator::generate_if_else(const IfElseStmt &ies) {
+    llvm::Function *parent = builder.GetInsertBlock()->getParent();
+    llvm::Value *cond = generate_expr(*ies.cond);
+    llvm::BasicBlock *then_bb = llvm::BasicBlock::Create(context, "if.then.branch", parent);
+    llvm::BasicBlock *else_bb = llvm::BasicBlock::Create(context, "if.else.branch", parent);
+    llvm::BasicBlock *merge_bb = llvm::BasicBlock::Create(context, "if.merge.branch", parent);
+
+    builder.CreateCondBr(cond, then_bb, else_bb);
+    
+    builder.SetInsertPoint(then_bb);
+    vars.push({});
+    for (auto &stmt : ies.then_branch) {
+        generate_stmt(*stmt);
+    }
+    vars.pop();
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        builder.CreateBr(merge_bb);
+    }
+
+    builder.SetInsertPoint(else_bb);
+    vars.push({});
+    for (auto &stmt : ies.false_branch) {
+        generate_stmt(*stmt);
+    }
+    vars.pop();
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        builder.CreateBr(merge_bb);
+    }
+    
+    builder.SetInsertPoint(merge_bb);
+}
+
+void CodeGenerator::generate_for(const ForStmt &fs) {
+    llvm::Function *parent = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock *index_bb = llvm::BasicBlock::Create(context, "for.index", parent);
+    llvm::BasicBlock *cond_bb = llvm::BasicBlock::Create(context, "for.cond", parent);
+    llvm::BasicBlock *change_index_bb = llvm::BasicBlock::Create(context, "for.change_index", parent);
+    llvm::BasicBlock *block_bb = llvm::BasicBlock::Create(context, "for.block", parent);
+    llvm::BasicBlock *exit_bb = llvm::BasicBlock::Create(context, "for.exit", parent);
+
+    builder.CreateBr(index_bb);
+    builder.SetInsertPoint(index_bb);
+    generate_stmt(*fs.index);
+
+    builder.CreateBr(cond_bb);
+    builder.SetInsertPoint(cond_bb);
+    llvm::Value *condition_value = generate_expr(*fs.cond);
+
+    builder.CreateCondBr(condition_value, block_bb, exit_bb);
+    builder.SetInsertPoint(block_bb);
+    vars.push({});
+    for (auto& stmt : fs.block) {
+        generate_stmt(*stmt);
+    }
+    vars.pop();
+
+    builder.CreateBr(change_index_bb);
+    builder.SetInsertPoint(change_index_bb);
+    generate_stmt(*fs.change_index);
+
+    builder.CreateBr(cond_bb);
+    builder.SetInsertPoint(exit_bb);
 }
 
 llvm::Value *CodeGenerator::generate_expr(const Node &expr) {
