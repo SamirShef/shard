@@ -35,6 +35,9 @@ void TypeChecker::analyze_stmt(const Node &stmt) {
         case NodeType::FOR_STMT:
             analyze_for(*stmt.as<ForStmt>());
             break;
+        case NodeType::BREAK_STMT:
+        case NodeType::CONTINUE_STMT:
+            break; // skip `break` or `continue`
         default:
             diag_part_create(diag, 21, stmt.pos, DiagLevel::ERROR, "");
             break;

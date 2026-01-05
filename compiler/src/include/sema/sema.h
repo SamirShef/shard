@@ -117,10 +117,12 @@ class SemanticAnalyzer {
     std::unordered_map<std::string, Function> functions;
     std::stack<Type> fun_ret_types;
 
+    u32 loop_depth;
+
     static std::unordered_map<TypeKind, std::vector<TypeKind>> implicitly_cast_allowed;
 
 public:
-    SemanticAnalyzer(Diagnostic &diag, std::vector<NodeUPTR> &stmts) : diag(diag), stmts(stmts) {
+    SemanticAnalyzer(Diagnostic &diag, std::vector<NodeUPTR> &stmts) : diag(diag), stmts(stmts), loop_depth(0) {
         vars.push({});
     }
 
@@ -135,6 +137,8 @@ private:
     void analyze_ret(const RetStmt &rs);
     void analyze_if_else(const IfElseStmt &ies);
     void analyze_for(const ForStmt &fs);
+    void analyze_break(const BreakStmt &bs);
+    void analyze_continue(const ContinueStmt &cs);
 
     ExprVal analyze_expr(const Node &expr);
     ExprVal analyze_literal_expr(const LiteralExpr &le);
