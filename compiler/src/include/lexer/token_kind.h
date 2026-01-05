@@ -18,6 +18,8 @@ enum class TokenKind {
     IF,             // keyword `if`
     ELSE,           // keyword `else`
     FOR,            // keyword `for`
+    BREAK,          // keyword `break`
+    CONTINUE,       // keyword `continue`
 
     BLIT,           // bool literal
     CLIT,           // character literal
