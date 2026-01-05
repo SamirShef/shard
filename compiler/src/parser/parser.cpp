@@ -15,19 +15,35 @@ std::vector<NodeUPTR> Parser::parse() {
 
 NodeUPTR Parser::parse_stmt() {
     if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
-        return parse_var_def_stmt();
+        NodeUPTR stmt = parse_var_def_stmt();
+        consume_semi();
+        return stmt;
     }
     else if (match(TokenKind::ID)) {
         if (match(TokenKind::OPEN_PAREN)) {
-            return parse_fun_call_stmt();
+            NodeUPTR stmt = parse_fun_call_stmt();
+            consume_semi();
+            return stmt;
         }
-        return parse_var_asgn_stmt();
+        NodeUPTR stmt = parse_var_asgn_stmt();
+        consume_semi();
+        return stmt;
     }
     else if (match(TokenKind::FUN)) {
         return parse_fun_def_stmt();
     }
     else if (match(TokenKind::RET)) {
-        return parse_return_stmt();
+        NodeUPTR stmt = parse_return_stmt();
+        consume_semi();
+        return stmt;
+    }
+    else if (match(TokenKind::IF)) {
+        NodeUPTR stmt = parse_if_else_stmt();
+        return stmt;
+    }
+    else if (match(TokenKind::FOR)) {
+        NodeUPTR stmt = parse_for_stmt();
+        return stmt;
     }
     else {
         DiagPart err { .pos = { .file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column, .pos = peek().pos.pos },
@@ -71,7 +87,6 @@ NodeUPTR Parser::parse_var_def_stmt() {
         expr = parse_expr();
     }
     Position stmt_pos = first_token.pos;
-    stmt_pos.len = consume_semi().pos.pos - stmt_pos.pos;
     return std::make_unique<VarDefStmt>(name_token.val, type, std::move(expr), stmt_pos);
 }
 
@@ -81,13 +96,11 @@ NodeUPTR Parser::parse_var_asgn_stmt() {
         match(TokenKind::PERCENT_EQ)) {
         Token op = peek(-1);
         NodeUPTR expr = parse_expr();
-        consume_semi();
         return std::make_unique<VarAsgnStmt>(name_token.val, create_compound_op(name_token.val, op, std::move(expr)), name_token.pos);
     }
     else {
         consume(TokenKind::EQ, 15, "expected `=`");
         NodeUPTR expr = parse_expr();
-        consume_semi();
         return std::make_unique<VarAsgnStmt>(name_token.val, std::move(expr), name_token.pos);
     }
     diag_part_create(diag, 15, name_token.pos, DiagLevel::ERROR, "");
@@ -132,7 +145,6 @@ NodeUPTR Parser::parse_fun_call_stmt() {
             consume(TokenKind::COMMA, 15, "expected `,`");
         }
     }
-    consume_semi();
     return std::make_unique<FunCallStmt>(name_token.val, std::move(args), name_token.pos);
 }
 
@@ -141,9 +153,56 @@ NodeUPTR Parser::parse_return_stmt() {
     NodeUPTR expr = nullptr;
     if (!match(TokenKind::SEMI)) {
         expr = parse_expr();
-        consume_semi();
     }
     return std::make_unique<RetStmt>(std::move(expr), pos);
+}
+
+NodeUPTR Parser::parse_if_else_stmt() {
+    const Token first_token = peek(-1);
+    NodeUPTR cond = parse_expr();
+    consume(TokenKind::OPEN_BRACE, 15, "expected `{`");
+    std::vector<NodeUPTR> then_branch;
+    while (!match(TokenKind::CLOSE_BRACE)) {
+        then_branch.push_back(parse_stmt());
+    }
+    std::vector<NodeUPTR> false_branch;
+    if (match(TokenKind::ELSE)) {
+        if (match(TokenKind::OPEN_BRACE)) {
+            while (!match(TokenKind::CLOSE_BRACE)) {
+                false_branch.push_back(parse_stmt());
+            }
+        }
+        else {
+            false_branch.push_back(parse_stmt());
+        }
+    }
+    return std::make_unique<IfElseStmt>(std::move(cond), std::move(then_branch), std::move(false_branch), first_token.pos);
+}
+
+NodeUPTR Parser::parse_for_stmt() {
+    const Token first_token = peek(-1);
+    NodeUPTR index = nullptr;
+    if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
+        index = parse_var_def_stmt();
+        consume(TokenKind::COMMA, 15, "expected `,`");
+    }
+    NodeUPTR cond = parse_expr();
+    NodeUPTR change_index = nullptr;
+    if (match(TokenKind::COMMA)) {
+        Token id = consume(TokenKind::ID, 12);
+        if (id.val != "") {
+            change_index = parse_var_asgn_stmt();
+        }
+        else {
+            --pos;
+        }
+    }
+    consume(TokenKind::OPEN_BRACE, 15, "expected `{`");
+    std::vector<NodeUPTR> block;
+    while (!match(TokenKind::CLOSE_BRACE)) {
+        block.push_back(parse_stmt());
+    }
+    return std::make_unique<ForStmt>(std::move(index), std::move(cond), std::move(change_index), std::move(block), first_token.pos);
 }
 
 NodeUPTR Parser::parse_expr() {
@@ -252,7 +311,7 @@ NodeUPTR Parser::parse_primary_expr() {
         #define LIT(kind, field, val) std::make_unique<LiteralExpr>(Value(Type(TypeKind::kind, true), {.field = val}), tok.pos)
         case TokenKind::BLIT:
             advance();
-            return LIT(BOOL, bool_val, tok.val == "true");
+            return LIT(BOOL, bool_val, static_cast<bool>(tok.val == "true"));
         case TokenKind::CLIT:
             advance();
             return LIT(CHAR, char_val, static_cast<char>(tok.val[0]));
@@ -261,16 +320,16 @@ NodeUPTR Parser::parse_primary_expr() {
             return LIT(I16, i16_val, static_cast<i16>(std::stoi(tok.val)));
         case TokenKind::ILIT:
             advance();
-            return LIT(I32, i32_val, std::stoi(tok.val));
+            return LIT(I32, i32_val, static_cast<i32>(std::stoi(tok.val)));
         case TokenKind::LLIT:
             advance();
-            return LIT(I64, i64_val, std::stol(tok.val));
+            return LIT(I64, i64_val, static_cast<i64>(std::stol(tok.val)));
         case TokenKind::FLIT:
             advance();
-            return LIT(F32, f32_val, std::stof(tok.val));
+            return LIT(F32, f32_val, static_cast<f32>(std::stof(tok.val)));
         case TokenKind::DLIT:
             advance();
-            return LIT(F64, f64_val, std::stod(tok.val));
+            return LIT(F64, f64_val, static_cast<f64>(std::stod(tok.val)));
         default: {
             DiagPart err { .pos = { .file_name = tok.pos.file_name, .line = tok.pos.line, .column = tok.pos.column, .pos = tok.pos.pos },
                            .level = DiagLevel::ERROR, .code = 17 };
@@ -295,7 +354,7 @@ Argument Parser::parse_arg() {
 
 const Token Parser::peek(u64 rpos) const {
     if (pos + rpos >= tokens.size()) {
-        std::cerr << COLOR_RED << "The index passed to the parser is out of bounds\n" << COLOR_RESET;
+        std::cerr << COLOR_RED << "The index passed to the parser is out of bounds: " << pos << " + " << rpos << " / " << tokens.size() << '\n' << COLOR_RESET;
         exit(1);
     }
     return tokens[pos + rpos];

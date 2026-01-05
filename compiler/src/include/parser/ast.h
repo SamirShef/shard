@@ -12,6 +12,8 @@ enum class NodeType {
     FUN_DEF_STMT,
     FUN_CALL_STMT,
     RET_STMT,
+    IF_ELSE_STMT,
+    FOR_STMT,
     LITERAL_EXPR,
     BINARY_EXPR,
     UNARY_EXPR,
@@ -44,7 +46,7 @@ struct Node {
         return nullptr;
     }
 
-    virtual const std::string to_str() const = 0;
+    virtual const std::string to_str(i32 space) const = 0;
 };
 
 enum class TypeKind {
@@ -180,11 +182,11 @@ struct VarDefStmt : Node {
         return NodeType::VAR_DEF_STMT;
     }
 
-    const std::string to_str() const override {
+    const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << "VarDefStmt: " << type.to_str() << ' ' << name;
+        res << std::string(space, ' ') << "VarDefStmt: " << type.to_str() << ' ' << name;
         if (expr) {
-            res << " = " << expr->to_str();
+            res << " = " << expr->to_str(0);
         }
         return res.str();
     }
@@ -197,17 +199,15 @@ struct VarAsgnStmt : Node {
     explicit VarAsgnStmt(const std::string name, NodeUPTR expr, Position pos) : name(name), expr(std::move(expr)), NODE {}
 
     NodeUPTR clone() const override {
-        NodeUPTR cloned_expr = expr->clone();
-        return std::make_unique<VarAsgnStmt>(name, std::move(cloned_expr), pos);
+        return std::make_unique<VarAsgnStmt>(name, expr ? expr->clone() : nullptr, pos);
     }
     
     static NodeType get_type() {
         return NodeType::VAR_ASGN_STMT;
     }
 
-    const std::string to_str() const override {
-        std::ostringstream res;
-        return "VarAsgnStmt: " + name + " = " + expr->to_str();
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "VarAsgnStmt: " + name + " = " + (expr ? expr->to_str(0) : "<nil>");
     }
 };
 
@@ -232,9 +232,9 @@ struct FunDefStmt : Node {
         return NodeType::FUN_DEF_STMT;
     }
 
-    const std::string to_str() const override {
+    const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << "FunDefStmt: " << ret_type.to_str() << ' ' << name << " (";
+        res << std::string(space, ' ') << "FunDefStmt: " << ret_type.to_str() << ' ' << name << " (";
         for (int i = 0; i < args.size(); ++i) {
             res << args[i].to_str();
             if (i < args.size() - 1) {
@@ -246,9 +246,9 @@ struct FunDefStmt : Node {
             res << '\n';
         }
         for (const auto &stmt : block) {
-            res << "  " << stmt->to_str() << '\n';
+            res << stmt->to_str(space + 2) << '\n';
         }
-        res << '}';
+        res << (!block.empty() ? std::string(space, ' ') : "") << '}';
         return res.str();
     }
 };
@@ -271,16 +271,16 @@ struct FunCallStmt : Node {
         return NodeType::FUN_CALL_STMT;
     }
 
-    const std::string to_str() const override {
+    const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << "FunCallStmt: " << fun_name << " (";
+        res << std::string(space, ' ') << "FunCallStmt: " << fun_name << " (";
         for (int i = 0; i < args.size(); ++i) {
-            res << args[i]->to_str();
+            res << args[i]->to_str(0);
             if (i < args.size() - 1) {
                 res << ", ";
             }
         }
-        res << ')';
+        res << std::string(space, ' ') << ')';
         return res.str();
     }
 };
@@ -298,11 +298,90 @@ struct RetStmt : Node {
         return NodeType::RET_STMT;
     }
 
-    const std::string to_str() const override {
-        if (expr) {
-            return "RetStmt: " + expr->to_str();
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "RetStmt: " + (expr ? expr->to_str(0) : "<nil>");
+    }
+};
+
+struct IfElseStmt : Node {
+    NodeUPTR cond;
+    std::vector<NodeUPTR> then_branch;
+    std::vector<NodeUPTR> false_branch;
+
+    explicit IfElseStmt(NodeUPTR cond, std::vector<NodeUPTR> then_branch, std::vector<NodeUPTR> false_branch, Position pos)
+                      : cond(std::move(cond)), then_branch(std::move(then_branch)), false_branch(std::move(false_branch)), NODE {}
+
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_then_branch(then_branch.size());
+        for (int i = 0; i < then_branch.size(); ++i) {
+            cloned_then_branch[i] = then_branch[i]->clone();
         }
-        return "RetStmt: noth";
+        std::vector<NodeUPTR> cloned_false_branch(false_branch.size());
+        for (int i = 0; i < false_branch.size(); ++i) {
+            cloned_false_branch[i] = false_branch[i]->clone();
+        }
+        return std::make_unique<IfElseStmt>(cond ? cond->clone() : nullptr, std::move(cloned_then_branch), std::move(cloned_false_branch), pos);
+    }
+
+    static NodeType get_type() {
+        return NodeType::IF_ELSE_STMT;
+    }
+
+    const std::string to_str(i32 space) const override {
+        std::ostringstream res;
+        res << std::string(space, ' ') << "IfElseStmt: (" << (cond ? cond->to_str(0) : "<nil>") << ") {";
+        if (!then_branch.empty()) {
+            res << '\n';
+        }
+        for (const auto &stmt : then_branch) {
+            res << stmt->to_str(space + 2) << '\n';
+        }
+        res << (!then_branch.empty() ? std::string(space, ' ') : "") << '}';
+        if (!false_branch.empty()) {
+            res << " else {\n";
+            for (const auto &stmt : false_branch) {
+                res << stmt->to_str(space + 2) << '\n';
+            }
+            res << std::string(space, ' ') << '}';
+        }
+        return res.str();
+    }
+};
+
+struct ForStmt : Node {
+    NodeUPTR index;
+    NodeUPTR cond;
+    NodeUPTR change_index;
+    std::vector<NodeUPTR> block;
+
+    explicit ForStmt(NodeUPTR index, NodeUPTR cond, NodeUPTR change_index, std::vector<NodeUPTR> block, Position pos)
+                   : index(std::move(index)), cond(std::move(cond)), change_index(std::move(change_index)), block(std::move(block)), NODE {}
+
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_block(block.size());
+        for (int i = 0; i < block.size(); ++i) {
+            cloned_block[i] = block[i]->clone();
+        }
+        return std::make_unique<ForStmt>(index ? index->clone() : nullptr, cond ? cond->clone() : nullptr,
+                                         change_index ? change_index->clone() : nullptr, std::move(cloned_block), pos);
+    }
+
+    static NodeType get_type() {
+        return NodeType::FOR_STMT;
+    }
+
+    const std::string to_str(i32 space) const override {
+        std::ostringstream res;
+        res << std::string(space, ' ') << "ForStmt: (" << (index ? index->to_str(0) + ", " : "") << (cond ? cond->to_str(0) : "")
+            << (change_index ?  + ", " + change_index->to_str(0) : "") << ") {";
+        if (!block.empty()) {
+            res << '\n';
+        }
+        for (const auto &stmt : block) {
+            res << stmt->to_str(space + 2) << '\n';
+        }
+        res << (!block.empty() ? std::string(space, ' ') : "") << '}';
+        return res.str();
     }
 };
 
@@ -319,8 +398,8 @@ struct LiteralExpr : Node {
         return NodeType::LITERAL_EXPR;
     }
 
-    const std::string to_str() const override {
-        return "LiteralExpr: " + val.to_str();
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "LiteralExpr: " + val.to_str();
     }
 };
 
@@ -339,9 +418,9 @@ struct BinaryExpr : Node {
         return NodeType::BINARY_EXPR;
     }
 
-    const std::string to_str() const override {
+    const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << "BinaryExpr: " << LHS->to_str() << ' ';
+        res << std::string(space, ' ') + "BinaryExpr: " << LHS->to_str(0) << ' ';
         switch (op.kind) {
             case TokenKind::LOG_AND:
                 res << "&&";
@@ -395,7 +474,7 @@ struct BinaryExpr : Node {
                 res << "<UNKNOWN>";
                 break;
         }
-        res << ' ' << RHS->to_str();
+        res << ' ' << RHS->to_str(0);
         return res.str();
     }
 };
@@ -414,9 +493,9 @@ struct UnaryExpr : Node {
         return NodeType::UNARY_EXPR;
     }
 
-    const std::string to_str() const override {
+    const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << "UnaryExpr: ";
+        res << std::string(space, ' ') + "UnaryExpr: ";
         switch (op.kind) {
             case TokenKind::BANG:
                 res << "!";
@@ -428,7 +507,7 @@ struct UnaryExpr : Node {
                 res << "<UNKNOWN>";
                 break;
         }
-        res << RHS->to_str();
+        res << RHS->to_str(0);
         return res.str();
     }
 };
@@ -446,8 +525,8 @@ struct VarExpr : Node {
         return NodeType::VAR_EXPR;
     }
 
-    const std::string to_str() const override {
-        return "VarExpr: " + var_name;
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "VarExpr: " + var_name;
     }
 };
 
@@ -469,11 +548,11 @@ struct FunCallExpr : Node {
         return NodeType::FUN_CALL_EXPR;
     }
 
-    const std::string to_str() const override {
+    const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << "FunCallExpr: " << fun_name << " (";
+        res << std::string(space, ' ') << "FunCallExpr: " << fun_name << " (";
         for (int i = 0; i < args.size(); ++i) {
-            res << args[i]->to_str();
+            res << args[i]->to_str(0);
             if (i < args.size() - 1) {
                 res << ", ";
             }

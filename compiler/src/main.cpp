@@ -87,12 +87,12 @@ int main(int argc, char **argv) {
 
     Parser parser(diag, src, tokens);
     std::vector<NodeUPTR> stmts = parser.parse();
+    print_errs_and_clear(diag);
     if (flags.print_ast) {
         for (const NodeUPTR &stmt : stmts) {
-            std::cout << stmt->to_str() << '\n';
+            std::cout << stmt->to_str(0) << '\n';
         }
     }
-    print_errs_and_clear(diag);
 
     TypeChecker type_checker(diag, stmts);      // only types checking
     type_checker.analyze();

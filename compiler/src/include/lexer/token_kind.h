@@ -15,6 +15,9 @@ enum class TokenKind {
     NOTH,           // keyword `noth`
     FUN,            // keyword `fun`
     RET,            // keyword `return`
+    IF,             // keyword `if`
+    ELSE,           // keyword `else`
+    FOR,            // keyword `for`
 
     BLIT,           // bool literal
     CLIT,           // character literal

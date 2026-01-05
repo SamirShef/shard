@@ -52,6 +52,10 @@ void TypeChecker::analyze_var_asgn(const VarAsgnStmt &vas) {
     while (!vars_copy.empty()) {
         for (auto var : vars_copy.top()) {
             if (var.first == vas.name) {
+                if (var.second.is_const) {
+                    diag_part_create(diag, 31, vas.pos, DiagLevel::ERROR, "");
+                    return;
+                }
                 implicitly_cast(analyze_expr(*vas.expr), var.second, vas.expr->pos);
                 return;
             }
