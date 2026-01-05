@@ -45,6 +45,16 @@ NodeUPTR Parser::parse_stmt() {
         NodeUPTR stmt = parse_for_stmt();
         return stmt;
     }
+    else if (match(TokenKind::BREAK)) {
+        const Token first_token = peek(-1);
+        consume_semi();
+        return std::make_unique<BreakStmt>(first_token.pos);
+    }
+    else if (match(TokenKind::CONTINUE)) {
+        const Token first_token = peek(-1);
+        consume_semi();
+        return std::make_unique<ContinueStmt>(first_token.pos);
+    }
     else {
         DiagPart err { .pos = { .file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column, .pos = peek().pos.pos },
                        .level = DiagLevel::ERROR, .code = 15 };
@@ -308,6 +318,12 @@ NodeUPTR Parser::parse_primary_expr() {
                 return std::make_unique<FunCallExpr>(tok.val, std::move(args), tok.pos);
             }
             return std::make_unique<VarExpr>(tok.val, tok.pos);
+        case TokenKind::OPEN_PAREN: {
+            advance();
+            NodeUPTR expr = parse_expr();
+            consume(TokenKind::CLOSE_PAREN, 15, "expected `)`");
+            return expr;
+        }
         #define LIT(kind, field, val) std::make_unique<LiteralExpr>(Value(Type(TypeKind::kind, true), {.field = val}), tok.pos)
         case TokenKind::BLIT:
             advance();

@@ -14,6 +14,8 @@ enum class NodeType {
     RET_STMT,
     IF_ELSE_STMT,
     FOR_STMT,
+    BREAK_STMT,
+    CONTINUE_STMT,
     LITERAL_EXPR,
     BINARY_EXPR,
     UNARY_EXPR,
@@ -382,6 +384,38 @@ struct ForStmt : Node {
         }
         res << (!block.empty() ? std::string(space, ' ') : "") << '}';
         return res.str();
+    }
+};
+
+struct BreakStmt : Node {
+    explicit BreakStmt(Position pos) : NODE {}
+
+    NodeUPTR clone() const override {
+        return std::make_unique<BreakStmt>(pos);
+    }
+
+    static NodeType get_type() {
+        return NodeType::BREAK_STMT;
+    }
+
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "BreakStmt";
+    }
+};
+
+struct ContinueStmt : Node {
+    explicit ContinueStmt(Position pos) : NODE {}
+
+    NodeUPTR clone() const override {
+        return std::make_unique<ContinueStmt>(pos);
+    }
+
+    static NodeType get_type() {
+        return NodeType::CONTINUE_STMT;
+    }
+
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "ContinueStmt";
     }
 };
 

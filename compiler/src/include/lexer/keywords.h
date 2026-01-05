@@ -19,4 +19,6 @@ static std::unordered_map<std::string, TokenKind> keywords {
     { "if", TokenKind::IF },
     { "else", TokenKind::ELSE },
     { "for", TokenKind::FOR },
+    { "break", TokenKind::BREAK },
+    { "continue", TokenKind::CONTINUE },
 };
