@@ -168,13 +168,15 @@ void CodeGenerator::generate_for(const ForStmt &fs) {
 
     builder.CreateBr(index_bb);
     builder.SetInsertPoint(index_bb);
-    generate_stmt(*fs.index);
+    if (fs.index) {
+        generate_stmt(*fs.index);
+    }
 
     builder.CreateBr(cond_bb);
     builder.SetInsertPoint(cond_bb);
-    llvm::Value *condition_value = generate_expr(*fs.cond);
+    llvm::Value *cond = generate_expr(*fs.cond);
 
-    builder.CreateCondBr(condition_value, block_bb, exit_bb);
+    builder.CreateCondBr(cond, block_bb, exit_bb);
     builder.SetInsertPoint(block_bb);
     vars.push({});
     for (auto& stmt : fs.block) {
@@ -184,7 +186,9 @@ void CodeGenerator::generate_for(const ForStmt &fs) {
 
     builder.CreateBr(change_index_bb);
     builder.SetInsertPoint(change_index_bb);
-    generate_stmt(*fs.change_index);
+    if (fs.change_index) {
+        generate_stmt(*fs.change_index);
+    }
 
     builder.CreateBr(cond_bb);
     builder.SetInsertPoint(exit_bb);
