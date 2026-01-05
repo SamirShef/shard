@@ -23,6 +23,8 @@ private:
     NodeUPTR parse_fun_def_stmt();
     NodeUPTR parse_fun_call_stmt();
     NodeUPTR parse_return_stmt();
+    NodeUPTR parse_if_else_stmt();
+    NodeUPTR parse_for_stmt();
 
     // expressions
     NodeUPTR parse_expr();

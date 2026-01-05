@@ -16,4 +16,7 @@ static std::unordered_map<std::string, TokenKind> keywords {
     { "noth", TokenKind::NOTH },
     { "fun", TokenKind::FUN },
     { "return", TokenKind::RET },
+    { "if", TokenKind::IF },
+    { "else", TokenKind::ELSE },
+    { "for", TokenKind::FOR },
 };

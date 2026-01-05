@@ -32,7 +32,9 @@ static std::vector<std::string> err_msgs {
     "Not all paths return a value.",
     "Division by zero.",
     "Assigning a global variable in a global scope.",
-    "A variable defined using the `var` keyword cannot have a constant type."
+    "A variable defined using the `var` keyword cannot have a constant type.",
+    "Assigning a variable requires an expression.",
+    "The value of a constant cannot be changed."
 };
 
 static std::vector<std::string> war_msgs {

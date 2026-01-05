@@ -151,6 +151,7 @@ Token Lexer::tokenize_num_lit() {
             default:
                 pos--;
                 column--;
+                suffix = '\0';
         }
     }
     if (suffix == '\0') {
