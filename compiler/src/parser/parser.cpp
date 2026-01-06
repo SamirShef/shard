@@ -1,7 +1,4 @@
 #include "../include/parser/parser.h"
-#include <iostream>
-
-static u64 start_line_pos = 0;
 
 std::vector<NodeUPTR> Parser::parse() {
     std::vector<NodeUPTR> stmts;
@@ -13,47 +10,58 @@ std::vector<NodeUPTR> Parser::parse() {
     return stmts;
 }
 
-NodeUPTR Parser::parse_stmt() {
+NodeUPTR Parser::parse_stmt(bool skip_semi) {
+    AccessModifier access = match(TokenKind::PUB) ? AccessModifier::PUB : AccessModifier::PRIV;
+
     if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
-        NodeUPTR stmt = parse_var_def_stmt();
-        consume_semi();
+        NodeUPTR stmt = parse_var_def_stmt(access);
+        if (skip_semi) {
+            consume_semi();
+        }
         return stmt;
     }
-    else if (match(TokenKind::ID)) {
-        if (match(TokenKind::OPEN_PAREN)) {
-            NodeUPTR stmt = parse_fun_call_stmt();
+    else if (peek().kind == TokenKind::ID) {
+        NodeUPTR stmt = parse_id_start_stmt(access);
+        if (skip_semi) {
             consume_semi();
-            return stmt;
         }
-        NodeUPTR stmt = parse_var_asgn_stmt();
-        consume_semi();
         return stmt;
     }
     else if (match(TokenKind::FUN)) {
-        return parse_fun_def_stmt();
+        return parse_fun_def_stmt(access);
     }
     else if (match(TokenKind::RET)) {
-        NodeUPTR stmt = parse_return_stmt();
-        consume_semi();
+        NodeUPTR stmt = parse_return_stmt(access);
+        if (skip_semi) {
+            consume_semi();
+        }
         return stmt;
     }
     else if (match(TokenKind::IF)) {
-        NodeUPTR stmt = parse_if_else_stmt();
+        NodeUPTR stmt = parse_if_else_stmt(access);
         return stmt;
     }
     else if (match(TokenKind::FOR)) {
-        NodeUPTR stmt = parse_for_stmt();
+        NodeUPTR stmt = parse_for_stmt(access);
         return stmt;
     }
     else if (match(TokenKind::BREAK)) {
         const Token first_token = peek(-1);
-        consume_semi();
-        return std::make_unique<BreakStmt>(first_token.pos);
+        if (skip_semi) {
+            consume_semi();
+        }
+        return std::make_unique<BreakStmt>(first_token.pos, access);
     }
     else if (match(TokenKind::CONTINUE)) {
         const Token first_token = peek(-1);
-        consume_semi();
-        return std::make_unique<ContinueStmt>(first_token.pos);
+        if (skip_semi) {
+            consume_semi();
+        }
+        return std::make_unique<ContinueStmt>(first_token.pos, access);
+    }
+    else if (match(TokenKind::STRUCT)) {
+        NodeUPTR stmt = parse_struct_stmt(access);
+        return stmt;
     }
     else {
         DiagPart err { .pos = { .file_name = peek().pos.file_name, .line = peek().pos.line, .column = peek().pos.column, .pos = peek().pos.pos },
@@ -64,7 +72,7 @@ NodeUPTR Parser::parse_stmt() {
     return nullptr;
 }
 
-NodeUPTR Parser::parse_var_def_stmt() {
+NodeUPTR Parser::parse_var_def_stmt(AccessModifier access) {
     const Token first_token = peek(-1);
     bool is_const = first_token.kind == TokenKind::CONST;
     const Token name_token = consume(TokenKind::ID, 12);
@@ -97,27 +105,29 @@ NodeUPTR Parser::parse_var_def_stmt() {
         expr = parse_expr();
     }
     Position stmt_pos = first_token.pos;
-    return std::make_unique<VarDefStmt>(name_token.val, type, std::move(expr), stmt_pos);
+    return std::make_unique<VarDefStmt>(name_token.val, type, std::move(expr), stmt_pos, access);
 }
 
-NodeUPTR Parser::parse_var_asgn_stmt() {
+NodeUPTR Parser::parse_var_asgn_stmt(AccessModifier access) {
     const Token name_token = peek(-1);
     if (match(TokenKind::PLUS_EQ) || match(TokenKind::MINUS_EQ) || match(TokenKind::STAR_EQ) || match(TokenKind::SLASH_EQ) ||
         match(TokenKind::PERCENT_EQ)) {
         Token op = peek(-1);
         NodeUPTR expr = parse_expr();
-        return std::make_unique<VarAsgnStmt>(name_token.val, create_compound_op(name_token.val, op, std::move(expr)), name_token.pos);
+        return std::make_unique<VarAsgnStmt>(name_token.val, create_compound_op(name_token.val, op,
+                                             std::make_unique<VarExpr>(name_token.val, name_token.pos), std::move(expr)),
+                                             name_token.pos, access);
     }
     else {
         consume(TokenKind::EQ, 15, "expected `=`");
         NodeUPTR expr = parse_expr();
-        return std::make_unique<VarAsgnStmt>(name_token.val, std::move(expr), name_token.pos);
+        return std::make_unique<VarAsgnStmt>(name_token.val, std::move(expr), name_token.pos, access);
     }
     diag_part_create(diag, 15, name_token.pos, DiagLevel::ERROR, "");
     return nullptr;
 }
 
-NodeUPTR Parser::parse_fun_def_stmt() {
+NodeUPTR Parser::parse_fun_def_stmt(AccessModifier access) {
     const Token name_token = consume(TokenKind::ID, 12);
     if (name_token.kind != TokenKind::ID) {
         DiagPart err { .pos = { .file_name = peek(-1).pos.file_name, .line = peek(-1).pos.line, .column = peek(-1).pos.column,
@@ -143,10 +153,10 @@ NodeUPTR Parser::parse_fun_def_stmt() {
     while (!match(TokenKind::CLOSE_BRACE)) {
         block.push_back(parse_stmt());
     }
-    return std::make_unique<FunDefStmt>(name_token.val, args, ret_type, std::move(block), name_token.pos);
+    return std::make_unique<FunDefStmt>(name_token.val, args, ret_type, std::move(block), name_token.pos, access);
 }
 
-NodeUPTR Parser::parse_fun_call_stmt() {
+NodeUPTR Parser::parse_fun_call_stmt(AccessModifier access) {
     const Token name_token = peek(-2);
     std::vector<NodeUPTR> args;
     while (!match(TokenKind::CLOSE_PAREN)) {
@@ -155,19 +165,19 @@ NodeUPTR Parser::parse_fun_call_stmt() {
             consume(TokenKind::COMMA, 15, "expected `,`");
         }
     }
-    return std::make_unique<FunCallStmt>(name_token.val, std::move(args), name_token.pos);
+    return std::make_unique<FunCallStmt>(name_token.val, std::move(args), name_token.pos, access);
 }
 
-NodeUPTR Parser::parse_return_stmt() {
+NodeUPTR Parser::parse_return_stmt(AccessModifier access) {
     Position pos = peek(-1).pos;
     NodeUPTR expr = nullptr;
     if (!match(TokenKind::SEMI)) {
         expr = parse_expr();
     }
-    return std::make_unique<RetStmt>(std::move(expr), pos);
+    return std::make_unique<RetStmt>(std::move(expr), pos, access);
 }
 
-NodeUPTR Parser::parse_if_else_stmt() {
+NodeUPTR Parser::parse_if_else_stmt(AccessModifier access) {
     const Token first_token = peek(-1);
     NodeUPTR cond = parse_expr();
     consume(TokenKind::OPEN_BRACE, 15, "expected `{`");
@@ -186,14 +196,14 @@ NodeUPTR Parser::parse_if_else_stmt() {
             false_branch.push_back(parse_stmt());
         }
     }
-    return std::make_unique<IfElseStmt>(std::move(cond), std::move(then_branch), std::move(false_branch), first_token.pos);
+    return std::make_unique<IfElseStmt>(std::move(cond), std::move(then_branch), std::move(false_branch), first_token.pos, access);
 }
 
-NodeUPTR Parser::parse_for_stmt() {
+NodeUPTR Parser::parse_for_stmt(AccessModifier access) {
     const Token first_token = peek(-1);
     NodeUPTR index = nullptr;
     if (match(TokenKind::VAR) || match(TokenKind::CONST)) {
-        index = parse_var_def_stmt();
+        index = parse_var_def_stmt(AccessModifier::PRIV);
         consume(TokenKind::COMMA, 15, "expected `,`");
     }
     NodeUPTR cond = parse_expr();
@@ -201,7 +211,7 @@ NodeUPTR Parser::parse_for_stmt() {
     if (match(TokenKind::COMMA)) {
         Token id = consume(TokenKind::ID, 12);
         if (id.val != "") {
-            change_index = parse_var_asgn_stmt();
+            change_index = parse_var_asgn_stmt(AccessModifier::PRIV);
         }
         else {
             --pos;
@@ -212,7 +222,38 @@ NodeUPTR Parser::parse_for_stmt() {
     while (!match(TokenKind::CLOSE_BRACE)) {
         block.push_back(parse_stmt());
     }
-    return std::make_unique<ForStmt>(std::move(index), std::move(cond), std::move(change_index), std::move(block), first_token.pos);
+    return std::make_unique<ForStmt>(std::move(index), std::move(cond), std::move(change_index), std::move(block), first_token.pos, access);
+}
+
+NodeUPTR Parser::parse_struct_stmt(AccessModifier access) {
+    const Token name_token = consume(TokenKind::ID, 12);
+    consume(TokenKind::OPEN_BRACE, 15, "expected `{`");
+    std::vector<NodeUPTR> fields;
+    while (!match(TokenKind::CLOSE_BRACE)) {
+        fields.push_back(parse_stmt(false));
+        if (peek().kind != TokenKind::CLOSE_BRACE) {
+            consume(TokenKind::COMMA, 15, "expected `,`");
+        }
+    }
+    return std::make_unique<StructStmt>(name_token.val, std::move(fields), name_token.pos, access);
+}
+
+NodeUPTR Parser::parse_field_asgn_stmt(NodeUPTR object, AccessModifier access) {
+    const Token name_token = peek(-1);
+    if (match(TokenKind::PLUS_EQ) || match(TokenKind::MINUS_EQ) || match(TokenKind::STAR_EQ) || match(TokenKind::SLASH_EQ) ||
+        match(TokenKind::PERCENT_EQ)) {
+        Token op = peek(-1);
+        NodeUPTR expr = parse_expr();
+        return std::make_unique<FieldAsgnStmt>(std::move(object), name_token.val, create_compound_op(name_token.val, op,
+                                               std::move(object), std::move(expr)), name_token.pos, access);
+    }
+    else {
+        consume(TokenKind::EQ, 15, "expected `=`");
+        NodeUPTR expr = parse_expr();
+        return std::make_unique<FieldAsgnStmt>(std::move(object), name_token.val, std::move(expr), name_token.pos, access);
+    }
+    diag_part_create(diag, 15, name_token.pos, DiagLevel::ERROR, "");
+    return nullptr;
 }
 
 NodeUPTR Parser::parse_expr() {
@@ -305,7 +346,7 @@ NodeUPTR Parser::parse_unary_expr() {
 NodeUPTR Parser::parse_primary_expr() {
     Token tok = peek();
     switch (tok.kind) {
-        case TokenKind::ID:
+        case TokenKind::ID: {
             advance();
             if (match(TokenKind::OPEN_PAREN)) {
                 std::vector<NodeUPTR> args;
@@ -315,13 +356,38 @@ NodeUPTR Parser::parse_primary_expr() {
                         consume(TokenKind::COMMA, 15, "expected `,`");
                     }
                 }
-                return std::make_unique<FunCallExpr>(tok.val, std::move(args), tok.pos);
+                NodeUPTR expr = std::make_unique<FunCallExpr>(tok.val, std::move(args), tok.pos);
+                if (match(TokenKind::DOT)) {
+                    return parse_chain_expr(std::move(expr));
+                }
+                return expr;
             }
-            return std::make_unique<VarExpr>(tok.val, tok.pos);
+            else if (match(TokenKind::OPEN_BRACE)) {
+                std::vector<std::pair<std::string, NodeUPTR>> fields;
+                while (!match(TokenKind::CLOSE_BRACE)) {
+                    std::string field_name = consume(TokenKind::ID, 12).val;
+                    consume(TokenKind::COLON, 15, "expected `:`");
+                    NodeUPTR expr = parse_expr();
+                    fields.push_back(std::make_pair(field_name, std::move(expr)));
+                    if (peek().kind != TokenKind::CLOSE_BRACE) {
+                        consume(TokenKind::COMMA, 15, "expected `,`");
+                    }
+                }
+                return std::make_unique<StructExpr>(tok.val, std::move(fields), tok.pos);
+            }
+            NodeUPTR expr = std::make_unique<VarExpr>(tok.val, tok.pos);
+            if (match(TokenKind::DOT)) {
+                return parse_chain_expr(std::move(expr));
+            }
+            return expr;
+        }
         case TokenKind::OPEN_PAREN: {
             advance();
             NodeUPTR expr = parse_expr();
             consume(TokenKind::CLOSE_PAREN, 15, "expected `)`");
+            if (match(TokenKind::DOT)) {
+                return parse_chain_expr(std::move(expr));
+            }
             return expr;
         }
         #define LIT(kind, field, val) std::make_unique<LiteralExpr>(Value(Type(TypeKind::kind, true), {.field = val}), tok.pos)
@@ -368,6 +434,50 @@ Argument Parser::parse_arg() {
     return Argument { .name = name_token.val, .type = type };
 }
 
+NodeUPTR Parser::parse_chain_expr(NodeUPTR object) {
+    const Token name_token = consume(TokenKind::ID, 12);
+    NodeUPTR expr = nullptr;
+    if (match(TokenKind::OPEN_PAREN)) {
+        std::vector<NodeUPTR> args;
+        while (!match(TokenKind::CLOSE_PAREN)) {
+            args.push_back(parse_expr());
+            if (peek().kind != TokenKind::CLOSE_PAREN) {
+                consume(TokenKind::COMMA, 15, "expected `,`");
+            }
+        }
+        expr = std::make_unique<MethodCallExpr>(std::move(object), name_token.val, std::move(args), name_token.pos);
+    }
+    else {
+        expr = std::make_unique<FieldExpr>(std::move(object), name_token.val, name_token.pos);
+    }
+    if (match(TokenKind::DOT)) {
+        return parse_chain_expr(std::move(expr));
+    }
+    return expr;
+}
+
+NodeUPTR Parser::parse_id_start_stmt(AccessModifier access) {
+    NodeUPTR expr = parse_primary_expr();
+    std::cout << expr->to_str(0) << "; " << peek().to_str() << '\n';
+    switch (expr->type) {
+        case NodeType::VAR_EXPR:
+            return parse_var_asgn_stmt(access);
+        case NodeType::FUN_CALL_EXPR:
+            return parse_fun_call_stmt(access);
+        case NodeType::FIELD_EXPR:
+            return parse_field_asgn_stmt(std::move(expr->as<FieldExpr>()->object), access);
+        case NodeType::METHOD_CALL_EXPR:
+            MethodCallExpr *method_call_expr = expr->as<MethodCallExpr>();
+            std::cout << (method_call_expr == nullptr) << '\n';
+            return std::make_unique<MethodCallStmt>(std::move(method_call_expr->object), method_call_expr->method_name,
+                                                    std::move(method_call_expr->args), method_call_expr->pos, access);
+    }
+    if (expr) {
+        diag_part_create(diag, 15, expr->pos, DiagLevel::ERROR, "");
+    }
+    return nullptr;
+}
+
 const Token Parser::peek(u64 rpos) const {
     if (pos + rpos >= tokens.size()) {
         std::cerr << COLOR_RED << "The index passed to the parser is out of bounds: " << pos << " + " << rpos << " / " << tokens.size() << '\n' << COLOR_RESET;
@@ -378,15 +488,12 @@ const Token Parser::peek(u64 rpos) const {
 
 const Token Parser::advance() {
     Token tok = peek();
-    pos++;
-    if (pos < tokens.size() && tok.pos.line < peek().pos.line) {
-        start_line_pos = peek().pos.pos;
-    }
+    ++pos;
     return tok;
 }
 
 const bool Parser::is_type(const TokenKind kind) const {
-    return (int)kind >= (int)TokenKind::BOOL && (int)kind <= (int)TokenKind::F64;
+    return (int)kind >= (int)TokenKind::BOOL && (int)kind <= (int)TokenKind::F64 || kind == TokenKind::ID;
 }
 
 const bool Parser::match(TokenKind kind) {
@@ -443,6 +550,8 @@ const Type Parser::consume_type() {
                 return Type(TypeKind::F64, is_const);
             case TokenKind::NOTH:
                 return Type(TypeKind::NOTH, is_const);
+            case TokenKind::ID:
+                return Type(TypeKind::STRUCT, is_const, type.val);
         }
     }
     DiagPart err { .pos = { .file_name = type.pos.file_name, .line = type.pos.line, .column = type.pos.column, .pos = type.pos.pos },
@@ -451,10 +560,10 @@ const Type Parser::consume_type() {
     return Type(TypeKind::I32);
 }
 
-NodeUPTR Parser::create_compound_op(std::string var_name, Token op, NodeUPTR expr) {
+NodeUPTR Parser::create_compound_op(std::string var_name, Token op, NodeUPTR base, NodeUPTR expr) {
     Position pos = expr->pos;
     switch (op.kind) {
-        #define EXPR(type, val) std::make_unique<BinaryExpr>(Token(TokenKind::type, val, op.pos), std::make_unique<VarExpr>(var_name, op.pos), std::move(expr), pos)
+        #define EXPR(type, val) std::make_unique<BinaryExpr>(Token(TokenKind::type, val, op.pos), std::move(base), std::move(expr), pos)
         case TokenKind::PLUS_EQ:
             return EXPR(PLUS, "+");
         case TokenKind::MINUS_EQ:

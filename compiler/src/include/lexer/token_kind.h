@@ -20,6 +20,8 @@ enum class TokenKind {
     FOR,            // keyword `for`
     BREAK,          // keyword `break`
     CONTINUE,       // keyword `continue`
+    STRUCT,         // keyword `struct`
+    PUB,            // keyword `pub`
 
     BLIT,           // bool literal
     CLIT,           // character literal

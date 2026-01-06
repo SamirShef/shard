@@ -16,18 +16,30 @@ enum class NodeType {
     FOR_STMT,
     BREAK_STMT,
     CONTINUE_STMT,
+    STRUCT_STMT,
+    FIELD_ASGN_STMT,
+    METHOD_CALL_STMT,
     LITERAL_EXPR,
     BINARY_EXPR,
     UNARY_EXPR,
     VAR_EXPR,
-    FUN_CALL_EXPR
+    FUN_CALL_EXPR,
+    STRUCT_EXPR,
+    FIELD_EXPR,
+    METHOD_CALL_EXPR
+};
+
+enum class AccessModifier {
+    PRIV,
+    PUB
 };
 
 struct Node {
     NodeType type;
     Position pos;
+    AccessModifier access;
 
-    explicit Node(NodeType type, Position pos) : type(type), pos(pos) {}
+    explicit Node(NodeType type, Position pos, AccessModifier access) : type(type), pos(pos), access(access) {}
     virtual ~Node() = default;
     
     virtual std::unique_ptr<Node> clone() const = 0;
@@ -59,15 +71,17 @@ enum class TypeKind {
     I64,
     F32,
     F64,
-    NOTH
+    NOTH,
+    STRUCT,
 };
 
 struct Type {
     TypeKind kind;
     bool is_const;
+    std::string val;
 
-    explicit Type(TypeKind kind) : kind(kind), is_const(false) {}
-    explicit Type(TypeKind kind, bool is_const) : kind(kind), is_const(is_const) {}
+    explicit Type(TypeKind kind, std::string val = "") : kind(kind), is_const(false), val(val) {}
+    explicit Type(TypeKind kind, bool is_const, std::string val = "") : kind(kind), is_const(is_const), val(val) {}
 
     const bool operator==(Type &other) {
         return kind == other.kind && is_const == other.is_const;
@@ -103,6 +117,9 @@ struct Type {
                 break;
             case TypeKind::NOTH:
                 res = "noth";
+                break;
+            case TypeKind::STRUCT:
+                res = val;
                 break;
         }
         return is_const ? "const " + res : res;
@@ -166,18 +183,18 @@ struct Argument {
 using NodeUPTR = std::unique_ptr<Node>;
 using NodeSPTR = std::shared_ptr<Node>;
 
-#define NODE Node(get_type(), pos)
+#define NODE Node(get_type(), pos, access)
 
 struct VarDefStmt : Node {
     const std::string name;
     Type type;
     NodeUPTR expr;
 
-    explicit VarDefStmt(const std::string name, Type type, NodeUPTR expr, Position pos) : name(name), type(type), expr(std::move(expr)), NODE {}
+    explicit VarDefStmt(const std::string name, Type type, NodeUPTR expr, Position pos, AccessModifier acces) : name(name), type(type), expr(std::move(expr)), NODE {}
 
     NodeUPTR clone() const override {
         NodeUPTR cloned_expr = expr->clone();
-        return std::make_unique<VarDefStmt>(name, type, std::move(cloned_expr), pos);
+        return std::make_unique<VarDefStmt>(name, type, std::move(cloned_expr), pos, access);
     }
     
     static NodeType get_type() {
@@ -198,10 +215,10 @@ struct VarAsgnStmt : Node {
     const std::string name;
     NodeUPTR expr;
 
-    explicit VarAsgnStmt(const std::string name, NodeUPTR expr, Position pos) : name(name), expr(std::move(expr)), NODE {}
+    explicit VarAsgnStmt(const std::string name, NodeUPTR expr, Position pos, AccessModifier acces) : name(name), expr(std::move(expr)), NODE {}
 
     NodeUPTR clone() const override {
-        return std::make_unique<VarAsgnStmt>(name, expr ? expr->clone() : nullptr, pos);
+        return std::make_unique<VarAsgnStmt>(name, expr ? expr->clone() : nullptr, pos, access);
     }
     
     static NodeType get_type() {
@@ -219,7 +236,7 @@ struct FunDefStmt : Node {
     Type ret_type;
     std::vector<NodeUPTR> block;
 
-    explicit FunDefStmt(std::string name, std::vector<Argument> args, Type ret_type, std::vector<NodeUPTR> block, Position pos)
+    explicit FunDefStmt(std::string name, std::vector<Argument> args, Type ret_type, std::vector<NodeUPTR> block, Position pos, AccessModifier acces)
                       : name(name), args(args), ret_type(ret_type), block(std::move(block)), NODE {}
     
     NodeUPTR clone() const override {
@@ -227,7 +244,7 @@ struct FunDefStmt : Node {
         for (int i = 0; i < block.size(); ++i) {
             cloned_block[i] = block[i]->clone();
         }
-        return std::make_unique<FunDefStmt>(name, args, ret_type, std::move(cloned_block), pos);
+        return std::make_unique<FunDefStmt>(name, args, ret_type, std::move(cloned_block), pos, access);
     }
 
     static NodeType get_type() {
@@ -259,14 +276,14 @@ struct FunCallStmt : Node {
     std::string fun_name;
     std::vector<NodeUPTR> args;
 
-    explicit FunCallStmt(std::string fun_name, std::vector<NodeUPTR> args, Position pos) : fun_name(fun_name), args(std::move(args)), NODE {}
+    explicit FunCallStmt(std::string fun_name, std::vector<NodeUPTR> args, Position pos, AccessModifier acces) : fun_name(fun_name), args(std::move(args)), NODE {}
 
     NodeUPTR clone() const override {
         std::vector<NodeUPTR> cloned_args(args.size());
         for (int i = 0; i < args.size(); ++i) {
             cloned_args[i] = args[i]->clone();
         }
-        return std::make_unique<FunCallStmt>(fun_name, std::move(cloned_args), pos);
+        return std::make_unique<FunCallStmt>(fun_name, std::move(cloned_args), pos, access);
     }
     
     static NodeType get_type() {
@@ -282,7 +299,7 @@ struct FunCallStmt : Node {
                 res << ", ";
             }
         }
-        res << std::string(space, ' ') << ')';
+        res << ')';
         return res.str();
     }
 };
@@ -290,10 +307,10 @@ struct FunCallStmt : Node {
 struct RetStmt : Node {
     NodeUPTR expr;
 
-    explicit RetStmt(NodeUPTR expr, Position pos) : expr(std::move(expr)), NODE {}
+    explicit RetStmt(NodeUPTR expr, Position pos, AccessModifier acces) : expr(std::move(expr)), NODE {}
 
     NodeUPTR clone() const override {
-        return std::make_unique<RetStmt>(expr ? expr->clone() : nullptr, pos);
+        return std::make_unique<RetStmt>(expr ? expr->clone() : nullptr, pos, access);
     }
 
     static NodeType get_type() {
@@ -310,7 +327,7 @@ struct IfElseStmt : Node {
     std::vector<NodeUPTR> then_branch;
     std::vector<NodeUPTR> false_branch;
 
-    explicit IfElseStmt(NodeUPTR cond, std::vector<NodeUPTR> then_branch, std::vector<NodeUPTR> false_branch, Position pos)
+    explicit IfElseStmt(NodeUPTR cond, std::vector<NodeUPTR> then_branch, std::vector<NodeUPTR> false_branch, Position pos, AccessModifier acces)
                       : cond(std::move(cond)), then_branch(std::move(then_branch)), false_branch(std::move(false_branch)), NODE {}
 
     NodeUPTR clone() const override {
@@ -322,7 +339,7 @@ struct IfElseStmt : Node {
         for (int i = 0; i < false_branch.size(); ++i) {
             cloned_false_branch[i] = false_branch[i]->clone();
         }
-        return std::make_unique<IfElseStmt>(cond ? cond->clone() : nullptr, std::move(cloned_then_branch), std::move(cloned_false_branch), pos);
+        return std::make_unique<IfElseStmt>(cond ? cond->clone() : nullptr, std::move(cloned_then_branch), std::move(cloned_false_branch), pos, access);
     }
 
     static NodeType get_type() {
@@ -356,7 +373,7 @@ struct ForStmt : Node {
     NodeUPTR change_index;
     std::vector<NodeUPTR> block;
 
-    explicit ForStmt(NodeUPTR index, NodeUPTR cond, NodeUPTR change_index, std::vector<NodeUPTR> block, Position pos)
+    explicit ForStmt(NodeUPTR index, NodeUPTR cond, NodeUPTR change_index, std::vector<NodeUPTR> block, Position pos, AccessModifier acces)
                    : index(std::move(index)), cond(std::move(cond)), change_index(std::move(change_index)), block(std::move(block)), NODE {}
 
     NodeUPTR clone() const override {
@@ -365,7 +382,7 @@ struct ForStmt : Node {
             cloned_block[i] = block[i]->clone();
         }
         return std::make_unique<ForStmt>(index ? index->clone() : nullptr, cond ? cond->clone() : nullptr,
-                                         change_index ? change_index->clone() : nullptr, std::move(cloned_block), pos);
+                                         change_index ? change_index->clone() : nullptr, std::move(cloned_block), pos, access);
     }
 
     static NodeType get_type() {
@@ -388,10 +405,10 @@ struct ForStmt : Node {
 };
 
 struct BreakStmt : Node {
-    explicit BreakStmt(Position pos) : NODE {}
+    explicit BreakStmt(Position pos, AccessModifier acces) : NODE {}
 
     NodeUPTR clone() const override {
-        return std::make_unique<BreakStmt>(pos);
+        return std::make_unique<BreakStmt>(pos, access);
     }
 
     static NodeType get_type() {
@@ -404,10 +421,10 @@ struct BreakStmt : Node {
 };
 
 struct ContinueStmt : Node {
-    explicit ContinueStmt(Position pos) : NODE {}
+    explicit ContinueStmt(Position pos, AccessModifier acces) : NODE {}
 
     NodeUPTR clone() const override {
-        return std::make_unique<ContinueStmt>(pos);
+        return std::make_unique<ContinueStmt>(pos, access);
     }
 
     static NodeType get_type() {
@@ -416,6 +433,93 @@ struct ContinueStmt : Node {
 
     const std::string to_str(i32 space) const override {
         return std::string(space, ' ') + "ContinueStmt";
+    }
+};
+
+struct StructStmt : Node {
+    std::string name;
+    std::vector<NodeUPTR> fields;
+    
+    explicit StructStmt(std::string name, std::vector<NodeUPTR> fields, Position pos, AccessModifier acces) : name(name), fields(std::move(fields)), NODE {}
+
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_fields(fields.size());
+        for (int i = 0; i < fields.size(); ++i) {
+            cloned_fields[i] = fields[i]->clone();
+        }
+        return std::make_unique<StructStmt>(name, std::move(cloned_fields), pos, access);
+    }
+
+    static NodeType get_type() {
+        return NodeType::STRUCT_STMT;
+    }
+
+    const std::string to_str(i32 space) const override {
+        std::ostringstream res;
+        res << std::string(space, ' ') << "StructStmt: {";
+        if (!fields.empty()) {
+            res << '\n';
+        }
+        for (auto &field : fields) {
+            res << field->to_str(space + 2) << '\n';
+        }
+        res << (!fields.empty() ? std::string(space, ' ') : "") << '}';
+        return res.str();
+    }
+};
+
+struct FieldAsgnStmt : Node {
+    NodeUPTR object;
+    const std::string name;
+    NodeUPTR expr;
+
+    explicit FieldAsgnStmt(NodeUPTR object, const std::string name, NodeUPTR expr, Position pos, AccessModifier acces) : object(std::move(object)), name(name),
+                           expr(std::move(expr)), NODE {}
+
+    NodeUPTR clone() const override {
+        return std::make_unique<FieldAsgnStmt>(object->clone(), name, expr ? expr->clone() : nullptr, pos, access);
+    }
+    
+    static NodeType get_type() {
+        return NodeType::FIELD_ASGN_STMT;
+    }
+
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "FieldAsgnStmt: " + name + " from " + object->to_str(0) + " = " + (expr ? expr->to_str(0) : "<nil>");
+    }
+};
+
+struct MethodCallStmt : Node {
+    NodeUPTR object;
+    std::string method_name;
+    std::vector<NodeUPTR> args;
+
+    explicit MethodCallStmt(NodeUPTR object, std::string method_name, std::vector<NodeUPTR> args, Position pos, AccessModifier acces) : object(std::move(object)),
+                            method_name(method_name), args(std::move(args)), NODE {}
+
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_args(args.size());
+        for (int i = 0; i < args.size(); ++i) {
+            cloned_args[i] = args[i]->clone();
+        }
+        return std::make_unique<MethodCallStmt>(object->clone(), method_name, std::move(cloned_args), pos, access);
+    }
+    
+    static NodeType get_type() {
+        return NodeType::METHOD_CALL_STMT;
+    }
+
+    const std::string to_str(i32 space) const override {
+        std::ostringstream res;
+        res << std::string(space, ' ') << "MethodCallStmt: " << method_name << " (";
+        for (int i = 0; i < args.size(); ++i) {
+            res << args[i]->to_str(0);
+            if (i < args.size() - 1) {
+                res << ", ";
+            }
+        }
+        res << ')' << " from " << object->to_str(0);
+        return res.str();
     }
 };
 
@@ -592,6 +696,98 @@ struct FunCallExpr : Node {
             }
         }
         res << ')';
+        return res.str();
+    }
+};
+
+struct StructExpr : Node {
+    std::string name;
+    std::vector<std::pair<std::string, NodeUPTR>> fields;
+
+    explicit StructExpr(std::string name, std::vector<std::pair<std::string, NodeUPTR>> fields, Position pos)
+                      : name(name), fields(std::move(fields)), NODE {}
+    
+    NodeUPTR clone() const override {
+        std::vector<std::pair<std::string, NodeUPTR>> cloned_fields(fields.size());
+        for (int i = 0; i < fields.size(); ++i) {
+            cloned_fields[i] = std::make_pair(fields[i].first, fields[i].second->clone());
+        }
+        return std::make_unique<StructExpr>(name, std::move(cloned_fields), pos);
+    }
+
+    static NodeType get_type() {
+        return NodeType::STRUCT_EXPR;
+    }
+
+    const std::string to_str(i32 space) const override {
+        std::ostringstream res;
+        res << std::string(space, ' ') << "StructExpr: " << name << " {";
+        if (!fields.empty()) {
+            res << ' ';
+        }
+        for (int i = 0; i < fields.size(); ++i) {
+            res << fields[i].first << ": " << fields[i].second->to_str(0);
+            if (i < fields.size() - 1) {
+                res << ", ";
+            }
+        }
+        if (!fields.empty()) {
+            res << ' ';
+        }
+        res << '}';
+        return res.str();
+    }
+};
+
+struct FieldExpr : Node {
+    NodeUPTR object;
+    std::string field_name;
+
+    explicit FieldExpr(NodeUPTR object, std::string field_name, Position pos) : object(std::move(object)), field_name(field_name), NODE {}
+
+    NodeUPTR clone() const override {
+        return std::make_unique<FieldExpr>(object->clone(), field_name, pos);
+    }
+
+    static NodeType get_type() {
+        return NodeType::FIELD_EXPR;
+    }
+
+    const std::string to_str(i32 space) const override {
+        return std::string(space, ' ') + "FieldExpr: " + field_name + " from " + object->to_str(0);
+    }
+};
+
+struct MethodCallExpr : Node {
+    NodeUPTR object;
+    std::string method_name;
+    std::vector<NodeUPTR> args;
+
+    explicit MethodCallExpr(NodeUPTR object, std::string method_name, std::vector<NodeUPTR> args, Position pos) : object(std::move(object)), method_name(method_name),
+                            args(std::move(args)), NODE {}
+
+    NodeUPTR clone() const override {
+        std::vector<NodeUPTR> cloned_args(args.size());
+        for (int i = 0; i < args.size(); ++i) {
+            cloned_args[i] = args[i]->clone();
+        }
+        return std::make_unique<MethodCallExpr>(object->clone(), method_name, std::move(cloned_args), pos);
+    }
+
+    static NodeType get_type() {
+        return NodeType::METHOD_CALL_EXPR;
+    }
+
+    const std::string to_str(i32 space) const override {
+        std::ostringstream res;
+        res << std::string(space, ' ') << "MethodCallExpr: " << method_name << " (";
+        for (int i = 0; i < args.size(); ++i) {
+            res << args[i]->to_str(0);
+            if (i < args.size() - 1) {
+                res << ", ";
+            }
+        }
+        res << ')' << " from " << object->to_str(0);
         return res.str();
     }
 };
