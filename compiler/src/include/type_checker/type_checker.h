@@ -17,9 +17,14 @@ class TypeChecker {
     std::unordered_map<std::string, Function> functions;
     std::stack<Type> fun_ret_types;
 
+    struct Field {
+        Type type;
+        AccessModifier access;
+    };
+    
     struct Struct {
         std::string name;
-        std::unordered_map<std::string, Type> fields;
+        std::unordered_map<std::string, Field> fields;
     };
     std::unordered_map<std::string, Struct> structs;
 

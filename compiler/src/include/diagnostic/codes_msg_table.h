@@ -41,6 +41,7 @@ static std::vector<std::string> err_msgs {
     "Structure does not declared.",
     "The object is not a structure.",
     "Field does not declared.",
+    "Access to private member.",
 };
 
 static std::vector<std::string> war_msgs {

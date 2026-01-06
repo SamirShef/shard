@@ -160,18 +160,33 @@ void TypeChecker::analyze_struct(const StructStmt &ss) {
     for (auto &field : ss.fields) {
         if (field->type == NodeType::VAR_DEF_STMT) {
             auto vds = field->as<VarDefStmt>();
-            s.fields.emplace(vds->name, vds->type);
+            s.fields.emplace(vds->name, Field { .type = vds->type, .access = vds->access });
         }
     }
     structs.emplace(ss.name, s);
 }
 
 void TypeChecker::analyze_field_asgn_stmt(const FieldAsgnStmt &fas) {
-
+    Type object_type = analyze_expr(*fas.object);
+    if (object_type.kind != TypeKind::STRUCT) {
+        diag_part_create(diag, 36, fas.object->pos, DiagLevel::ERROR, "");
+        return;
+    }
+    if (auto it = structs.find(object_type.val); it != structs.end()) {
+        for (auto &field : it->second.fields) {
+            if (field.first == fas.name) {
+                implicitly_cast(analyze_expr(*fas.expr), field.second.type, fas.expr->pos);
+                return;
+            }
+        }
+        diag_part_create(diag, 37, fas.pos, DiagLevel::ERROR, "Field `" + fas.name + "` is undeclared in structure `" + object_type.val + "`.");
+        return;
+    }
+    diag_part_create(diag, 35, fas.object->pos, DiagLevel::ERROR, "Structure `" + object_type.val + "` is undeclared in current space.");
 }
 
 void TypeChecker::analyze_method_call_stmt(const MethodCallStmt &mcs) {
-
+    // TODO: create logic
 }
 
 Type TypeChecker::analyze_expr(const Node &expr) {
@@ -250,9 +265,9 @@ Type TypeChecker::analyze_binary_expr(const BinaryExpr &be) {
             else {
                 return get_common_type(LHS, RHS, be.op.pos);
             }
-        default:
-            return get_common_type(LHS, RHS, be.op.pos);
+        default: {}
     }
+    return get_common_type(LHS, RHS, be.op.pos);
 }
 
 Type TypeChecker::analyze_unary_expr(const UnaryExpr &ue) {
@@ -320,7 +335,7 @@ Type TypeChecker::analyze_field_expr(const FieldExpr &fe) {
     }
     if (auto it = structs.find(object_type.val); it != structs.end()) {
         if (auto field = it->second.fields.find(fe.name); field != it->second.fields.end()) {
-            return field->second;
+            return field->second.type;
         }
         diag_part_create(diag, 37, fe.pos, DiagLevel::ERROR, "Field `" + fe.name + "` is undeclared in structure `" + object_type.val + "`.");
         return Type(TypeKind::I32, true);
@@ -330,6 +345,7 @@ Type TypeChecker::analyze_field_expr(const FieldExpr &fe) {
 }
 
 Type TypeChecker::analyze_method_call_expr(const MethodCallExpr &mce) {
+    // TODO: create logic
     return Type(TypeKind::I32, true);
 }
 

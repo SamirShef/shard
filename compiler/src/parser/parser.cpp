@@ -493,7 +493,7 @@ const Token Parser::advance() {
 }
 
 const bool Parser::is_type(const TokenKind kind) const {
-    return (int)kind >= (int)TokenKind::BOOL && (int)kind <= (int)TokenKind::F64 || kind == TokenKind::ID;
+    return (int)kind >= (int)TokenKind::BOOL && (int)kind <= (int)TokenKind::F64 || kind == TokenKind::NOTH || kind == TokenKind::ID;
 }
 
 const bool Parser::match(TokenKind kind) {
