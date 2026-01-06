@@ -26,6 +26,7 @@ private:
     NodeUPTR parse_if_else_stmt(AccessModifier access);
     NodeUPTR parse_for_stmt(AccessModifier access);
     NodeUPTR parse_struct_stmt(AccessModifier access);
+    NodeUPTR parse_field_asgn_stmt(NodeUPTR object, AccessModifier access);
 
     // expressions
     NodeUPTR parse_expr();
@@ -39,6 +40,8 @@ private:
     NodeUPTR parse_primary_expr();
 
     Argument parse_arg();
+    NodeUPTR parse_chain_expr(NodeUPTR object);
+    NodeUPTR parse_id_start_stmt(AccessModifier access);
 
     const Token peek(u64 rpos = 0) const;
     const Token advance();
@@ -48,6 +51,6 @@ private:
     const Token consume(TokenKind kind, u16 err_code, std::string err_msg);
     const Token consume_semi();
     const Type consume_type();
-    NodeUPTR create_compound_op(std::string var_name, Token op, NodeUPTR expr);
+    NodeUPTR create_compound_op(std::string var_name, Token op, NodeUPTR base, NodeUPTR expr);
     u64 get_end_line_pos(Token start_token) const;
 };
