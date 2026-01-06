@@ -262,7 +262,7 @@ SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_var_expr(const VarExpr &ve) 
     auto vars_copy = vars;
     while (!vars_copy.empty()) {
         for (auto var : vars_copy.top()) {
-            if (var.first == ve.var_name) {
+            if (var.first == ve.name) {
                 return var.second;
             }
         }
@@ -271,7 +271,7 @@ SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_var_expr(const VarExpr &ve) 
 }
 
 SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_fun_call_expr(const FunCallExpr &fce) {
-    Function fun = functions.at(fce.fun_name);
+    Function fun = functions.at(fce.name);
     vars.push({});
     for (auto &stmt : fun.block) {
         if (auto rs = stmt->as<RetStmt>()) {

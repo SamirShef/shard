@@ -16,6 +16,13 @@ class TypeChecker {
     };
     std::unordered_map<std::string, Function> functions;
     std::stack<Type> fun_ret_types;
+
+    struct Struct {
+        std::string name;
+        std::unordered_map<std::string, Type> fields;
+    };
+    std::unordered_map<std::string, Struct> structs;
+
     static std::unordered_map<TypeKind, std::vector<TypeKind>> implicitly_cast_allowed;
 
 public:
@@ -34,6 +41,9 @@ private:
     void analyze_ret(const RetStmt &rs);
     void analyze_if_else(const IfElseStmt &ies);
     void analyze_for(const ForStmt &fs);
+    void analyze_struct(const StructStmt &ss);
+    void analyze_field_asgn_stmt(const FieldAsgnStmt &fas);
+    void analyze_method_call_stmt(const MethodCallStmt &mcs);
 
     Type analyze_expr(const Node &expr);
     Type analyze_literal_expr(const LiteralExpr &le);
@@ -41,6 +51,9 @@ private:
     Type analyze_unary_expr(const UnaryExpr &ue);
     Type analyze_var_expr(const VarExpr &ve);
     Type analyze_fun_call_expr(const FunCallExpr &fce);
+    Type analyze_struct_expr(const StructExpr &se);
+    Type analyze_field_expr(const FieldExpr &fe);
+    Type analyze_method_call_expr(const MethodCallExpr &mce);
 
     bool has_common_type(const Type LHS, const Type RHS);
     Type get_common_type(const Type LHS, const Type RHS, Position pos);

@@ -651,12 +651,12 @@ struct UnaryExpr : Node {
 };
 
 struct VarExpr : Node {
-    std::string var_name;
+    std::string name;
 
-    explicit VarExpr(std::string var_name, Position pos) : var_name(var_name), NODE {}
+    explicit VarExpr(std::string name, Position pos) : name(name), NODE {}
 
     NodeUPTR clone() const override {
-        return std::make_unique<VarExpr>(var_name, pos);
+        return std::make_unique<VarExpr>(name, pos);
     }
 
     static NodeType get_type() {
@@ -664,22 +664,22 @@ struct VarExpr : Node {
     }
 
     const std::string to_str(i32 space) const override {
-        return std::string(space, ' ') + "VarExpr: " + var_name;
+        return std::string(space, ' ') + "VarExpr: " + name;
     }
 };
 
 struct FunCallExpr : Node {
-    std::string fun_name;
+    std::string name;
     std::vector<NodeUPTR> args;
 
-    explicit FunCallExpr(std::string fun_name, std::vector<NodeUPTR> args, Position pos) : fun_name(fun_name), args(std::move(args)), NODE {}
+    explicit FunCallExpr(std::string name, std::vector<NodeUPTR> args, Position pos) : name(name), args(std::move(args)), NODE {}
 
     NodeUPTR clone() const override {
         std::vector<NodeUPTR> cloned_args(args.size());
         for (int i = 0; i < args.size(); ++i) {
             cloned_args[i] = args[i]->clone();
         }
-        return std::make_unique<FunCallExpr>(fun_name, std::move(cloned_args), pos);
+        return std::make_unique<FunCallExpr>(name, std::move(cloned_args), pos);
     }
 
     static NodeType get_type() {
@@ -688,7 +688,7 @@ struct FunCallExpr : Node {
 
     const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << std::string(space, ' ') << "FunCallExpr: " << fun_name << " (";
+        res << std::string(space, ' ') << "FunCallExpr: " << name << " (";
         for (int i = 0; i < args.size(); ++i) {
             res << args[i]->to_str(0);
             if (i < args.size() - 1) {
@@ -741,12 +741,12 @@ struct StructExpr : Node {
 
 struct FieldExpr : Node {
     NodeUPTR object;
-    std::string field_name;
+    std::string name;
 
-    explicit FieldExpr(NodeUPTR object, std::string field_name, Position pos) : object(std::move(object)), field_name(field_name), NODE {}
+    explicit FieldExpr(NodeUPTR object, std::string name, Position pos) : object(std::move(object)), name(name), NODE {}
 
     NodeUPTR clone() const override {
-        return std::make_unique<FieldExpr>(object->clone(), field_name, pos);
+        return std::make_unique<FieldExpr>(object->clone(), name, pos);
     }
 
     static NodeType get_type() {
@@ -754,16 +754,16 @@ struct FieldExpr : Node {
     }
 
     const std::string to_str(i32 space) const override {
-        return std::string(space, ' ') + "FieldExpr: " + field_name + " from " + object->to_str(0);
+        return std::string(space, ' ') + "FieldExpr: " + name + " from " + object->to_str(0);
     }
 };
 
 struct MethodCallExpr : Node {
     NodeUPTR object;
-    std::string method_name;
+    std::string name;
     std::vector<NodeUPTR> args;
 
-    explicit MethodCallExpr(NodeUPTR object, std::string method_name, std::vector<NodeUPTR> args, Position pos) : object(std::move(object)), method_name(method_name),
+    explicit MethodCallExpr(NodeUPTR object, std::string name, std::vector<NodeUPTR> args, Position pos) : object(std::move(object)), name(name),
                             args(std::move(args)), NODE {}
 
     NodeUPTR clone() const override {
@@ -771,7 +771,7 @@ struct MethodCallExpr : Node {
         for (int i = 0; i < args.size(); ++i) {
             cloned_args[i] = args[i]->clone();
         }
-        return std::make_unique<MethodCallExpr>(object->clone(), method_name, std::move(cloned_args), pos);
+        return std::make_unique<MethodCallExpr>(object->clone(), name, std::move(cloned_args), pos);
     }
 
     static NodeType get_type() {
@@ -780,7 +780,7 @@ struct MethodCallExpr : Node {
 
     const std::string to_str(i32 space) const override {
         std::ostringstream res;
-        res << std::string(space, ' ') << "MethodCallExpr: " << method_name << " (";
+        res << std::string(space, ' ') << "MethodCallExpr: " << name << " (";
         for (int i = 0; i < args.size(); ++i) {
             res << args[i]->to_str(0);
             if (i < args.size() - 1) {

@@ -358,7 +358,7 @@ llvm::Value *CodeGenerator::generate_var_expr(const VarExpr &ve) {
     auto vars_copy = vars;
     while (!vars_copy.empty()) {
         for (auto var : vars_copy.top()) {
-            if (var.first == ve.var_name) {
+            if (var.first == ve.name) {
                 if (auto glob = llvm::dyn_cast<llvm::GlobalVariable>(var.second)) {
                     if (fun_ret_types.empty()) {
                         return glob->getInitializer();
@@ -376,12 +376,12 @@ llvm::Value *CodeGenerator::generate_var_expr(const VarExpr &ve) {
 }
 
 llvm::Value *CodeGenerator::generate_fun_call_expr(const FunCallExpr &fce) {
-    llvm::Function *fun = functions.at(fce.fun_name);
+    llvm::Function *fun = functions.at(fce.name);
     std::vector<llvm::Value*> args(fce.args.size());
     for (int i = 0; i < args.size(); ++i) {
         args[i] = generate_expr(*fce.args[i]);
     }
-    return builder.CreateCall(fun, args, fce.fun_name + ".call");
+    return builder.CreateCall(fun, args, fce.name + ".call");
 }
 
 llvm::Type *CodeGenerator::get_common_type(llvm::Type *LHS, llvm::Type *RHS) {
