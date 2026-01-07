@@ -54,6 +54,10 @@ void TypeChecker::analyze_stmt(const Node &stmt) {
 }
 
 void TypeChecker::analyze_var_def(const VarDefStmt &vds) {
+    if (vars.top().find(vds.name) != vars.top().end()) {
+        diag_part_create(diag, 39, vds.pos, DiagLevel::ERROR, "Variable `" + vds.name + "` already exists in current space.");
+        return;
+    }
     if (vds.type.kind == TypeKind::NOTH) {
         diag_part_create(diag, 23, vds.pos, DiagLevel::ERROR, "cannot use the `noth` type.");
         vars.top().emplace(vds.name, vds.type);
@@ -84,6 +88,10 @@ void TypeChecker::analyze_var_asgn(const VarAsgnStmt &vas) {
 }
 
 void TypeChecker::analyze_fun_def(const FunDefStmt &fds) {
+    if (functions.find(fds.name) != functions.end()) {
+        diag_part_create(diag, 40, fds.pos, DiagLevel::ERROR, "Function `" + fds.name + "` already exists in current space.");
+        return;
+    }
     vars.push({});
     fun_ret_types.push(fds.ret_type);
     Function fun { .name = fds.name, .ret_type = fds.ret_type };
@@ -156,6 +164,10 @@ void TypeChecker::analyze_for(const ForStmt &fs) {
 }
 
 void TypeChecker::analyze_struct(const StructStmt &ss) {
+    if (structs.find(ss.name) != structs.end()) {
+        diag_part_create(diag, 41, ss.pos, DiagLevel::ERROR, "Structure `" + ss.name + "` already exists in current space.");
+        return;
+    }
     Struct s { .name = ss.name };
     for (auto &field : ss.fields) {
         if (field->type == NodeType::VAR_DEF_STMT) {

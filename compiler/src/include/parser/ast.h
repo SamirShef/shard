@@ -84,11 +84,11 @@ struct Type {
     explicit Type(TypeKind kind, bool is_const, std::string val = "") : kind(kind), is_const(is_const), val(val) {}
 
     const bool operator==(Type &other) {
-        return kind == other.kind && is_const == other.is_const;
+        return kind == other.kind && val == other.val;
     }
 
     const bool operator==(const Type &other) const {
-        return kind == other.kind;
+        return kind == other.kind && val == other.val;
     }
 
     const std::string to_str() const {

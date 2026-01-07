@@ -42,6 +42,10 @@ static std::vector<std::string> err_msgs {
     "The object is not a structure.",
     "Field does not declared.",
     "Access to private member.",
+    "Variable already exists.",
+    "Function already exists.",
+    "Structure already exists.",
+    "The structure field has already been initialized."
 };
 
 static std::vector<std::string> war_msgs {
