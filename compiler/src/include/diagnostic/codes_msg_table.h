@@ -37,7 +37,15 @@ static std::vector<std::string> err_msgs {
     "The value of a constant cannot be changed.",
     "`break` must be inside the loop.",
     "`continue` must be inside the loop.",
-    "Unsupported member of the structure."
+    "Unsupported member of the structure.",
+    "Structure does not declared.",
+    "The object is not a structure.",
+    "Field does not declared.",
+    "Access to private member.",
+    "Variable already exists.",
+    "Function already exists.",
+    "Structure already exists.",
+    "The structure field has already been initialized."
 };
 
 static std::vector<std::string> war_msgs {

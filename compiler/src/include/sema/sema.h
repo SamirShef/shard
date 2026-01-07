@@ -17,6 +17,7 @@ class SemanticAnalyzer {
         F32,
         F64,
         NOTH,
+        STRUCT,
         UNKNOWN
     };
     
@@ -30,6 +31,7 @@ class SemanticAnalyzer {
             i64 i64_val;
             f32 f32_val;
             f64 f64_val;
+            u64 struct_index;
         } data;
 
         explicit ExprVal(ExprValType type, Data data) : type(type), data(data) {}
@@ -51,6 +53,8 @@ class SemanticAnalyzer {
                     return AS_F64(f32_val);
                 case ExprValType::F64:
                     return AS_F64(f64_val);
+                case ExprValType::NOTH:
+                case ExprValType::STRUCT:
                 case ExprValType::UNKNOWN:
                     return 0.0;
                 #undef AS_F64
@@ -77,6 +81,8 @@ class SemanticAnalyzer {
                     return AS(F32, f32, f32_val);
                 case ExprValType::F64:
                     return AS(F64, f64, f64_val);
+                case ExprValType::NOTH:
+                case ExprValType::STRUCT:
                 case ExprValType::UNKNOWN:
                     return get_default(type);
                 #undef AS
@@ -100,6 +106,8 @@ class SemanticAnalyzer {
                     return NULL_VAL(f32_val);
                 case ExprValType::F64:
                     return NULL_VAL(f64_val);
+                case ExprValType::STRUCT:
+                case ExprValType::NOTH:
                 case ExprValType::UNKNOWN:
                     return ExprVal(ExprValType::UNKNOWN, ExprVal::Data { .i32_val = 0 });
                 #undef NULL_VAL
@@ -119,6 +127,20 @@ class SemanticAnalyzer {
 
     u32 loop_depth;
 
+    struct Field {
+        ExprVal val;
+        Type type;
+        bool is_manual_initialized;
+        AccessModifier access;
+    };
+    
+    struct Struct {
+        std::string name;
+        std::unordered_map<std::string, Field> fields;
+    };
+    std::unordered_map<std::string, Struct> structs;
+    std::vector<Struct> structs_instances;
+    
     static std::unordered_map<TypeKind, std::vector<TypeKind>> implicitly_cast_allowed;
 
 public:
@@ -139,6 +161,9 @@ private:
     void analyze_for(const ForStmt &fs);
     void analyze_break(const BreakStmt &bs);
     void analyze_continue(const ContinueStmt &cs);
+    void analyze_struct(const StructStmt &ss);
+    void analyze_field_asgn_stmt(const FieldAsgnStmt &fas);
+    void analyze_method_call_stmt(const MethodCallStmt &mcs);
 
     ExprVal analyze_expr(const Node &expr);
     ExprVal analyze_literal_expr(const LiteralExpr &le);
@@ -146,6 +171,9 @@ private:
     ExprVal analyze_unary_expr(const UnaryExpr &ue);
     ExprVal analyze_var_expr(const VarExpr &ve);
     ExprVal analyze_fun_call_expr(const FunCallExpr &fce);
+    ExprVal analyze_struct_expr(const StructExpr &se);
+    ExprVal analyze_field_expr(const FieldExpr &fe);
+    ExprVal analyze_method_call_expr(const MethodCallExpr &mce);
 
     ExprValType get_common_type(ExprValType LHS, ExprValType RHS);
     ExprVal binary_two_values(ExprVal LHS, ExprVal RHS, TokenKind op, Position pos);

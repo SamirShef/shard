@@ -42,6 +42,15 @@ void SemanticAnalyzer::analyze_stmt(const Node &stmt) {
         case NodeType::CONTINUE_STMT:
             analyze_continue(*stmt.as<ContinueStmt>());
             break;
+        case NodeType::STRUCT_STMT:
+            analyze_struct(*stmt.as<StructStmt>());
+            break;
+        case NodeType::FIELD_ASGN_STMT:
+            analyze_field_asgn_stmt(*stmt.as<FieldAsgnStmt>());
+            break;
+        case NodeType::METHOD_CALL_STMT:
+            analyze_method_call_stmt(*stmt.as<MethodCallStmt>());
+            break;
         default:
             diag_part_create(diag, 21, stmt.pos, DiagLevel::ERROR, "");
             break;
@@ -51,6 +60,11 @@ void SemanticAnalyzer::analyze_stmt(const Node &stmt) {
 void SemanticAnalyzer::analyze_var_def(const VarDefStmt &vds) {
     ExprVal expr = vds.expr ? analyze_expr(*vds.expr).cast_to(type_kind_to_expr_val_type(vds.type.kind)) :
                    ExprVal::get_default(type_kind_to_expr_val_type(vds.type.kind));
+    if (vds.type.kind == TypeKind::STRUCT) {
+        Struct base = structs.at(vds.type.val);
+        structs_instances.push_back(base);
+        expr = ExprVal(ExprValType::STRUCT, ExprVal::Data { .struct_index = structs_instances.size() - 1 });
+    }
     vars.top().emplace(vds.name, expr);
 }
 
@@ -173,6 +187,64 @@ void SemanticAnalyzer::analyze_continue(const ContinueStmt &cs) {
     }
 }
 
+void SemanticAnalyzer::analyze_struct(const StructStmt &ss) {
+    Struct s { .name = ss.name };
+    for (auto &field : ss.fields) {
+        if (field->type == NodeType::VAR_DEF_STMT) {
+            auto vds = field->as<VarDefStmt>();
+            ExprVal val = ExprVal::get_default(type_kind_to_expr_val_type(vds->type.kind));
+            s.fields.emplace(vds->name, Field { .val = val, .type = vds->type, .is_manual_initialized = false, .access = vds->access });
+        }
+        else {
+            diag_part_create(diag, 42, ss.pos, DiagLevel::ERROR, "");
+        }
+    }
+    structs.emplace(ss.name, s);
+    
+    for (auto &field : ss.fields) {
+        if (field->type == NodeType::VAR_DEF_STMT) {
+            auto vds = field->as<VarDefStmt>();
+            ExprVal val = ExprVal(ExprValType::UNKNOWN, ExprVal::Data { .i32_val = 0 });
+            if (vds->expr) {
+                val = analyze_expr(*vds->expr);
+            }
+            else {
+                if (vds->type.kind == TypeKind::STRUCT) {
+                    structs_instances.push_back(s);
+                    val = ExprVal(ExprValType::STRUCT, ExprVal::Data { .struct_index = structs_instances.size() - 1 });
+                }
+                else {
+                    val = ExprVal::get_default(type_kind_to_expr_val_type(vds->type.kind));
+                }
+            }
+            s.fields.emplace(vds->name, Field { .val = val, .type = vds->type, .is_manual_initialized = false, .access = vds->access });
+        }
+        else {
+            diag_part_create(diag, 42, ss.pos, DiagLevel::ERROR, "");
+        }
+    }
+}
+
+void SemanticAnalyzer::analyze_field_asgn_stmt(const FieldAsgnStmt &fas) {
+    ExprVal object_val = analyze_expr(*fas.object);
+    Struct object = structs_instances[object_val.data.struct_index];
+    if (auto field = object.fields.find(fas.name); field != object.fields.end()) {
+        ExprVal val = analyze_expr(*fas.expr);
+        Type dest = Type(expr_val_type_to_type_kind(val.type));
+        if (val.type == ExprValType::STRUCT) {
+            dest.val = structs_instances[val.data.struct_index].name;
+        }
+        implicitly_cast(dest, field->second.type, fas.expr->pos);
+        object.fields.at(fas.name).val = val;
+        return;
+    }
+    diag_part_create(diag, 37, fas.pos, DiagLevel::ERROR, "Field `" + fas.name + "` is undeclared in structure `" + object.name + "`.");
+}
+
+void SemanticAnalyzer::analyze_method_call_stmt(const MethodCallStmt &mcs) {
+
+}
+
 SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_expr(const Node &expr) {
     switch (expr.type) {
         case NodeType::LITERAL_EXPR:
@@ -185,6 +257,12 @@ SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_expr(const Node &expr) {
             return analyze_var_expr(*expr.as<VarExpr>());
         case NodeType::FUN_CALL_EXPR:
             return analyze_fun_call_expr(*expr.as<FunCallExpr>());
+        case NodeType::STRUCT_EXPR:
+            return analyze_struct_expr(*expr.as<StructExpr>());
+        case NodeType::FIELD_EXPR:
+            return analyze_field_expr(*expr.as<FieldExpr>());
+        case NodeType::METHOD_CALL_EXPR:
+            return analyze_method_call_expr(*expr.as<MethodCallExpr>());
         default:
             diag_part_create(diag, 19, expr.pos, DiagLevel::ERROR, "");
             return ExprVal(ExprValType::UNKNOWN, ExprVal::Data { .i32_val = 0 });
@@ -262,7 +340,7 @@ SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_var_expr(const VarExpr &ve) 
     auto vars_copy = vars;
     while (!vars_copy.empty()) {
         for (auto var : vars_copy.top()) {
-            if (var.first == ve.var_name) {
+            if (var.first == ve.name) {
                 return var.second;
             }
         }
@@ -271,7 +349,7 @@ SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_var_expr(const VarExpr &ve) 
 }
 
 SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_fun_call_expr(const FunCallExpr &fce) {
-    Function fun = functions.at(fce.fun_name);
+    Function fun = functions.at(fce.name);
     vars.push({});
     for (auto &stmt : fun.block) {
         if (auto rs = stmt->as<RetStmt>()) {
@@ -282,6 +360,40 @@ SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_fun_call_expr(const FunCallE
     }
     vars.pop();
     return ExprVal(ExprValType::NOTH, ExprVal::Data { .i32_val = 0 });
+}
+
+SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_struct_expr(const StructExpr &se) {
+    Struct base = structs.at(se.name);
+    for (int i = 0; i < se.fields.size(); ++i) {
+        if (auto field = base.fields.find(se.fields[i].first); field != base.fields.end()) {
+            if (field->second.is_manual_initialized) {
+                diag_part_create(diag, 42, se.fields[i].second->pos, DiagLevel::ERROR, "Field `" + se.fields[i].first + "` has already been initialized.");
+            }
+            else {
+                base.fields.at(se.fields[i].first).val = analyze_expr(*se.fields[i].second);
+                base.fields.at(se.fields[i].first).is_manual_initialized = true;
+            }
+        }
+        else {
+            diag_part_create(diag, 37, se.fields[i].second->pos, DiagLevel::ERROR, "Field `" + se.fields[i].first + "` is undeclared in structure `" + se.name + "`.");
+        }
+    }
+    structs_instances.push_back(base);
+    return ExprVal(ExprValType::STRUCT, ExprVal::Data { .struct_index = structs_instances.size() - 1 });
+}
+
+SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_field_expr(const FieldExpr &fe) {
+    ExprVal object_val = analyze_expr(*fe.object);
+    Struct object = structs_instances[object_val.data.struct_index];
+    if (auto field = object.fields.find(fe.name); field != object.fields.end()) {
+        return object.fields.at(fe.name).val;
+    }
+    diag_part_create(diag, 37, fe.pos, DiagLevel::ERROR, "Field `" + fe.name + "` is undeclared in structure `" + object.name + "`.");
+    return ExprVal(ExprValType::UNKNOWN, ExprVal::Data { .i32_val = 0 });
+}
+
+SemanticAnalyzer::ExprVal SemanticAnalyzer::analyze_method_call_expr(const MethodCallExpr &mce) {
+
 }
 
 SemanticAnalyzer::ExprValType SemanticAnalyzer::get_common_type(ExprValType LHS, ExprValType RHS) {
@@ -443,6 +555,8 @@ SemanticAnalyzer::ExprValType SemanticAnalyzer::type_kind_to_expr_val_type(TypeK
             return ExprValType::F64;
         case TypeKind::NOTH:
             return ExprValType::NOTH;
+        case TypeKind::STRUCT:
+            return ExprValType::STRUCT;
         default: {}
     }
     return ExprValType::UNKNOWN;
@@ -466,6 +580,10 @@ TypeKind SemanticAnalyzer::expr_val_type_to_type_kind(ExprValType type) {
             return TypeKind::F64;
         case ExprValType::NOTH:
             return TypeKind::NOTH;
+        case ExprValType::STRUCT:
+            return TypeKind::STRUCT;
+        case ExprValType::UNKNOWN:
+            return TypeKind::I32;
         default: {}
     }
 }

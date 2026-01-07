@@ -38,6 +38,15 @@ void TypeChecker::analyze_stmt(const Node &stmt) {
         case NodeType::BREAK_STMT:
         case NodeType::CONTINUE_STMT:
             break; // skip `break` or `continue`
+        case NodeType::STRUCT_STMT:
+            analyze_struct(*stmt.as<StructStmt>());
+            break;
+        case NodeType::FIELD_ASGN_STMT:
+            analyze_field_asgn_stmt(*stmt.as<FieldAsgnStmt>());
+            break;
+        case NodeType::METHOD_CALL_STMT:
+            analyze_method_call_stmt(*stmt.as<MethodCallStmt>());
+            break;
         default:
             diag_part_create(diag, 21, stmt.pos, DiagLevel::ERROR, "");
             break;
@@ -45,6 +54,10 @@ void TypeChecker::analyze_stmt(const Node &stmt) {
 }
 
 void TypeChecker::analyze_var_def(const VarDefStmt &vds) {
+    if (vars.top().find(vds.name) != vars.top().end()) {
+        diag_part_create(diag, 39, vds.pos, DiagLevel::ERROR, "Variable `" + vds.name + "` already exists in current space.");
+        return;
+    }
     if (vds.type.kind == TypeKind::NOTH) {
         diag_part_create(diag, 23, vds.pos, DiagLevel::ERROR, "cannot use the `noth` type.");
         vars.top().emplace(vds.name, vds.type);
@@ -75,6 +88,10 @@ void TypeChecker::analyze_var_asgn(const VarAsgnStmt &vas) {
 }
 
 void TypeChecker::analyze_fun_def(const FunDefStmt &fds) {
+    if (functions.find(fds.name) != functions.end()) {
+        diag_part_create(diag, 40, fds.pos, DiagLevel::ERROR, "Function `" + fds.name + "` already exists in current space.");
+        return;
+    }
     vars.push({});
     fun_ret_types.push(fds.ret_type);
     Function fun { .name = fds.name, .ret_type = fds.ret_type };
@@ -146,6 +163,44 @@ void TypeChecker::analyze_for(const ForStmt &fs) {
     vars.pop();
 }
 
+void TypeChecker::analyze_struct(const StructStmt &ss) {
+    if (structs.find(ss.name) != structs.end()) {
+        diag_part_create(diag, 41, ss.pos, DiagLevel::ERROR, "Structure `" + ss.name + "` already exists in current space.");
+        return;
+    }
+    Struct s { .name = ss.name };
+    for (auto &field : ss.fields) {
+        if (field->type == NodeType::VAR_DEF_STMT) {
+            auto vds = field->as<VarDefStmt>();
+            s.fields.emplace(vds->name, Field { .type = vds->type, .access = vds->access });
+        }
+    }
+    structs.emplace(ss.name, s);
+}
+
+void TypeChecker::analyze_field_asgn_stmt(const FieldAsgnStmt &fas) {
+    Type object_type = analyze_expr(*fas.object);
+    if (object_type.kind != TypeKind::STRUCT) {
+        diag_part_create(diag, 36, fas.object->pos, DiagLevel::ERROR, "");
+        return;
+    }
+    if (auto it = structs.find(object_type.val); it != structs.end()) {
+        for (auto &field : it->second.fields) {
+            if (field.first == fas.name) {
+                implicitly_cast(analyze_expr(*fas.expr), field.second.type, fas.expr->pos);
+                return;
+            }
+        }
+        diag_part_create(diag, 37, fas.pos, DiagLevel::ERROR, "Field `" + fas.name + "` is undeclared in structure `" + object_type.val + "`.");
+        return;
+    }
+    diag_part_create(diag, 35, fas.object->pos, DiagLevel::ERROR, "Structure `" + object_type.val + "` is undeclared in current space.");
+}
+
+void TypeChecker::analyze_method_call_stmt(const MethodCallStmt &mcs) {
+    // TODO: create logic
+}
+
 Type TypeChecker::analyze_expr(const Node &expr) {
     switch (expr.type) {
         case NodeType::LITERAL_EXPR:
@@ -158,6 +213,12 @@ Type TypeChecker::analyze_expr(const Node &expr) {
             return analyze_var_expr(*expr.as<VarExpr>());
         case NodeType::FUN_CALL_EXPR:
             return analyze_fun_call_expr(*expr.as<FunCallExpr>());
+        case NodeType::STRUCT_EXPR:
+            return analyze_struct_expr(*expr.as<StructExpr>());
+        case NodeType::FIELD_EXPR:
+            return analyze_field_expr(*expr.as<FieldExpr>());
+        case NodeType::METHOD_CALL_EXPR:
+            return analyze_method_call_expr(*expr.as<MethodCallExpr>());
         default:
             diag_part_create(diag, 19, expr.pos, DiagLevel::ERROR, "");
             return Type(TypeKind::I32, true);
@@ -216,9 +277,9 @@ Type TypeChecker::analyze_binary_expr(const BinaryExpr &be) {
             else {
                 return get_common_type(LHS, RHS, be.op.pos);
             }
-        default:
-            return get_common_type(LHS, RHS, be.op.pos);
+        default: {}
     }
+    return get_common_type(LHS, RHS, be.op.pos);
 }
 
 Type TypeChecker::analyze_unary_expr(const UnaryExpr &ue) {
@@ -244,20 +305,20 @@ Type TypeChecker::analyze_var_expr(const VarExpr &ve) {
     auto vars_copy = vars;
     while (!vars_copy.empty()) {
         for (auto var : vars_copy.top()) {
-            if (var.first == ve.var_name) {
+            if (var.first == ve.name) {
                 return var.second;
             }
         }
         vars_copy.pop();
     }
-    diag_part_create(diag, 22, ve.pos, DiagLevel::ERROR, "Variable `" + ve.var_name + "` is undeclared in current space.");
+    diag_part_create(diag, 22, ve.pos, DiagLevel::ERROR, "Variable `" + ve.name + "` is undeclared in current space.");
     return Type(TypeKind::I32, true);
 }
 
 Type TypeChecker::analyze_fun_call_expr(const FunCallExpr &fce) {
-    auto fun_it = functions.find(fce.fun_name);
+    auto fun_it = functions.find(fce.name);
     if (fun_it == functions.end()) {
-        diag_part_create(diag, 24, fce.pos, DiagLevel::ERROR, "Function `" + fce.fun_name + "` is undeclared in current space.");
+        diag_part_create(diag, 24, fce.pos, DiagLevel::ERROR, "Function `" + fce.name + "` is undeclared in current space.");
         return Type(TypeKind::I32, true);
     }
     Function fun = fun_it->second;
@@ -268,6 +329,36 @@ Type TypeChecker::analyze_fun_call_expr(const FunCallExpr &fce) {
         implicitly_cast(analyze_expr(*fce.args[i]), fun.args[i], fce.args[i]->pos);
     }
     return fun.ret_type;
+}
+
+Type TypeChecker::analyze_struct_expr(const StructExpr &se) {
+    if (auto it = structs.find(se.name); it != structs.end()) {
+        return Type(TypeKind::STRUCT, true, it->first);
+    }
+    diag_part_create(diag, 35, se.pos, DiagLevel::ERROR, "Structure `" + se.name + "` is undeclared in current space.");
+    return Type(TypeKind::I32, true);
+}
+
+Type TypeChecker::analyze_field_expr(const FieldExpr &fe) {
+    Type object_type = analyze_expr(*fe.object);
+    if (object_type.kind != TypeKind::STRUCT) {
+        diag_part_create(diag, 36, fe.object->pos, DiagLevel::ERROR, "");
+        return Type(TypeKind::I32, true);
+    }
+    if (auto it = structs.find(object_type.val); it != structs.end()) {
+        if (auto field = it->second.fields.find(fe.name); field != it->second.fields.end()) {
+            return field->second.type;
+        }
+        diag_part_create(diag, 37, fe.pos, DiagLevel::ERROR, "Field `" + fe.name + "` is undeclared in structure `" + object_type.val + "`.");
+        return Type(TypeKind::I32, true);
+    }
+    diag_part_create(diag, 35, fe.object->pos, DiagLevel::ERROR, "Structure `" + object_type.val + "` is undeclared in current space.");
+    return Type(TypeKind::I32, true);
+}
+
+Type TypeChecker::analyze_method_call_expr(const MethodCallExpr &mce) {
+    // TODO: create logic
+    return Type(TypeKind::I32, true);
 }
 
 bool TypeChecker::has_common_type(const Type LHS, const Type RHS) {

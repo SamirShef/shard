@@ -469,7 +469,7 @@ NodeUPTR Parser::parse_id_start_stmt(AccessModifier access) {
         case NodeType::METHOD_CALL_EXPR:
             MethodCallExpr *method_call_expr = expr->as<MethodCallExpr>();
             std::cout << (method_call_expr == nullptr) << '\n';
-            return std::make_unique<MethodCallStmt>(std::move(method_call_expr->object), method_call_expr->method_name,
+            return std::make_unique<MethodCallStmt>(std::move(method_call_expr->object), method_call_expr->name,
                                                     std::move(method_call_expr->args), method_call_expr->pos, access);
     }
     if (expr) {
@@ -493,7 +493,7 @@ const Token Parser::advance() {
 }
 
 const bool Parser::is_type(const TokenKind kind) const {
-    return (int)kind >= (int)TokenKind::BOOL && (int)kind <= (int)TokenKind::F64 || kind == TokenKind::ID;
+    return (int)kind >= (int)TokenKind::BOOL && (int)kind <= (int)TokenKind::F64 || kind == TokenKind::NOTH || kind == TokenKind::ID;
 }
 
 const bool Parser::match(TokenKind kind) {
